@@ -103,7 +103,7 @@ def forward_mixed_block(
     batch, n_tokens, width = x.shape
     attention = block.attn
     qkv = attention.qkv(x).unflatten(-1, (3, attention.num_heads, -1)).permute(2, 0, 3, 1, 4)
-    q, k, v = _apply_mixed_rope(
+    q, k = _apply_mixed_rope(
         block,
         qkv[0],
         qkv[1],
@@ -111,6 +111,7 @@ def forward_mixed_block(
         action_position,
         spatial_size,
     )
+    v = qkv[2]
     attn_mask = visibility.view(1, 1, n_tokens, n_tokens)
     x = F.scaled_dot_product_attention(
         q,

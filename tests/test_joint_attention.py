@@ -1,6 +1,10 @@
 import torch
 
-from latent_wam.models.joint_attention import build_joint_attention_mask
+from latent_wam.models.joint_attention import (
+    build_joint_attention_mask,
+    forward_mixed_block,
+)
+from latent_wam.vendor.vjepa21.layers import Block
 
 
 def test_one_way_stage_hides_context_from_actions():
@@ -33,3 +37,32 @@ def test_action_queries_are_joint_but_never_read_raw_context():
         mask = build_joint_attention_mask(16, future_ends, action_times, reciprocal)
         assert not mask[-10:, :16].any()
         assert mask[-10:, -10:].all()
+
+
+def test_mixed_rope_block_preserves_values_and_gradients():
+    block = Block(
+        dim=24,
+        num_heads=3,
+        mlp_ratio=2.0,
+        use_rope=True,
+        grid_size=2,
+        patch_size=16,
+    )
+    tokens = torch.randn(2, 10, 24, requires_grad=True)
+    visual_position_ids = torch.arange(8).unsqueeze(0).expand(2, -1)
+    action_position = torch.tensor([2.25, 2.5])
+    visibility = torch.ones(10, 10, dtype=torch.bool)
+
+    output = forward_mixed_block(
+        block,
+        tokens,
+        visual_position_ids,
+        action_position,
+        visibility,
+        spatial_size=2,
+    )
+
+    assert output.shape == tokens.shape
+    output.sum().backward()
+    assert tokens.grad is not None
+    assert torch.isfinite(tokens.grad).all()

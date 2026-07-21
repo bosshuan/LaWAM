@@ -53,8 +53,8 @@ outputs/<run-name>/<timestamp>/
 Create and activate the environment manually from the repository root:
 
 ```bash
-conda create --name lawam-312 python=3.12 pip --yes
-conda activate lawam-312
+conda create --name vjepa2-312 python=3.12 pip --yes
+conda activate vjepa2-312
 pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 pip install -e .
