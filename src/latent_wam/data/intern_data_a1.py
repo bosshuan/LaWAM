@@ -49,6 +49,7 @@ class SubdatasetRecord:
     robot_type: str
     tasks: dict[int, str]
     schema: ActionSchema
+    normalization_source: str
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -95,6 +96,94 @@ def _parse_norms(stats: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Feat
         std = np.asarray(entry["std"], dtype=np.float32).reshape(-1)
         result[key] = FeatureNorm(mean=mean, std=std)
     return result
+
+
+def _aggregate_episode_norms(
+    rows: list[dict[str, Any]], keys: tuple[str, ...]
+) -> dict[str, FeatureNorm]:
+    """Aggregate LeRobot v2.1 per-episode statistics without reading Parquet.
+
+    Each episode stores population mean/std and a scalar frame count. The
+    parallel-variance merge below preserves both within-episode and
+    between-episode variance while weighting every frame equally.
+    """
+    aggregates: dict[str, tuple[float, np.ndarray, np.ndarray]] = {}
+    for row_index, row in enumerate(rows):
+        stats = row.get("stats", {})
+        if not isinstance(stats, dict):
+            continue
+        for key in keys:
+            entry = stats.get(key)
+            if not isinstance(entry, dict) or not all(
+                name in entry for name in ("mean", "std", "count")
+            ):
+                continue
+            mean = np.asarray(entry["mean"], dtype=np.float64).reshape(-1)
+            std = np.asarray(entry["std"], dtype=np.float64).reshape(-1)
+            counts = np.asarray(entry["count"], dtype=np.float64).reshape(-1)
+            if mean.size == 0 or mean.shape != std.shape or counts.size == 0:
+                raise ValueError(
+                    f"Malformed episode statistics for {key} at row {row_index}"
+                )
+            if not np.allclose(counts, counts[0]):
+                raise ValueError(
+                    f"Feature {key} has non-scalar counts at row {row_index}: {counts}"
+                )
+            count = float(counts[0])
+            if (
+                count <= 0
+                or not np.isfinite(mean).all()
+                or not np.isfinite(std).all()
+                or np.any(std < 0)
+            ):
+                raise ValueError(
+                    f"Invalid episode statistics for {key} at row {row_index}"
+                )
+            episode_m2 = np.square(std) * count
+            if key not in aggregates:
+                aggregates[key] = (count, mean.copy(), episode_m2)
+                continue
+            old_count, old_mean, old_m2 = aggregates[key]
+            if old_mean.shape != mean.shape:
+                raise ValueError(
+                    f"Inconsistent episode-stat shape for {key}: "
+                    f"{old_mean.shape} versus {mean.shape}"
+                )
+            combined_count = old_count + count
+            delta = mean - old_mean
+            combined_mean = old_mean + delta * (count / combined_count)
+            combined_m2 = (
+                old_m2
+                + episode_m2
+                + np.square(delta) * old_count * count / combined_count
+            )
+            aggregates[key] = (combined_count, combined_mean, combined_m2)
+
+    return {
+        key: FeatureNorm(
+            mean=mean.astype(np.float32),
+            std=np.sqrt(np.maximum(m2 / count, 0.0)).astype(np.float32),
+        )
+        for key, (count, mean, m2) in aggregates.items()
+    }
+
+
+def _load_norms(
+    root: Path, keys: tuple[str, ...]
+) -> tuple[dict[str, FeatureNorm], Path]:
+    stats_path = root / "meta" / "stats.json"
+    if stats_path.is_file():
+        return _parse_norms(_read_json(stats_path), keys), stats_path
+
+    episode_stats_path = root / "meta" / "episodes_stats.jsonl"
+    if episode_stats_path.is_file():
+        rows = _read_jsonl(episode_stats_path)
+        return _aggregate_episode_norms(rows, keys), episode_stats_path
+
+    raise FileNotFoundError(
+        f"Missing normalization metadata for {root}; expected either "
+        f"{stats_path} or {episode_stats_path}"
+    )
 
 
 def _select_camera(features: dict[str, Any], requested: str) -> str:
@@ -196,25 +285,29 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
             if not action_keys or not state_keys:
                 continue
             camera = _select_camera(features, self.config.video.camera_key)
-            stats_path = root / "meta" / "stats.json"
-            if not stats_path.is_file():
-                raise FileNotFoundError(
-                    f"Missing normalization statistics for {root}: {stats_path}"
-                )
-            stats = _read_json(stats_path)
-            action_norms = _parse_norms(stats, action_keys)
-            state_norms = _parse_norms(stats, state_keys)
+            all_keys = (*action_keys, *state_keys)
+            norms, normalization_path = _load_norms(root, all_keys)
+            action_norms = {key: norms[key] for key in action_keys if key in norms}
+            state_norms = {key: norms[key] for key in state_keys if key in norms}
             missing_norms = [
                 key
-                for key in (*action_keys, *state_keys)
+                for key in all_keys
                 if not ("gripper" in key and "openness" in key)
-                and key not in action_norms
-                and key not in state_norms
+                and key not in norms
             ]
             if missing_norms:
                 raise ValueError(
-                    f"Missing mean/std statistics in {stats_path} for {missing_norms}"
+                    f"Missing mean/std statistics in {normalization_path} "
+                    f"for {missing_norms}"
                 )
+            for key, norm in norms.items():
+                expected_size = _feature_size(features[key])
+                if norm.mean.size != expected_size or norm.std.size != expected_size:
+                    raise ValueError(
+                        f"Normalization statistics in {normalization_path} for {key} "
+                        f"have shape ({norm.mean.size}, {norm.std.size}); "
+                        f"expected {expected_size}"
+                    )
             robot_type = str(info.get("robot_type", root.parent.name))
             schema_name = f"{robot_type}:{'|'.join(action_keys)}"
             cursor, gripper_ranges = 0, []
@@ -254,6 +347,7 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
                 robot_type=robot_type,
                 tasks=tasks,
                 schema=schema,
+                normalization_source=normalization_path.name,
             )
             subdataset_index = len(self.subdatasets)
             self.subdatasets.append(record)
@@ -393,6 +487,7 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
                         "anchor": anchor,
                         "camera": source.camera_key,
                         "schema": source.schema.name,
+                        "normalization_source": source.normalization_source,
                     }
                 ],
             ),

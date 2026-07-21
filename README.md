@@ -136,8 +136,10 @@ Use `--resume` only when continuing the same stage and optimizer schedule.
 The first implementation targets the official InternData-A1 LeRobot v2.1
 layout (`meta/info.json`, per-episode Parquet, and per-camera MP4). It discovers
 subdatasets recursively, chooses the head/main camera, and constructs masked
-joint/gripper schemas from each `info.json`. LeRobot v3.0 directories are
-excluded explicitly rather than being misread as v2.1.
+joint/gripper schemas from each `info.json`. Normalization uses `meta/stats.json`
+when present; the original `sim` release is supported by frame-weighted
+aggregation of its LeRobot v2.1 `meta/episodes_stats.jsonl`. LeRobot v3.0
+directories are excluded explicitly rather than being misread as v2.1.
 
 InternData-A1 is distributed separately under its own CC BY-NC-SA 4.0 terms.
 No dataset files are copied into this repository.

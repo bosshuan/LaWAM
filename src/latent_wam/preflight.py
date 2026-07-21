@@ -111,6 +111,28 @@ def main():
         report["sample_info_files"] = [str(path) for path in info_files[:10]]
         if not info_files:
             failures.append("No candidate meta/info.json files were found")
+        normalization_sources = {
+            "stats.json": 0,
+            "episodes_stats.jsonl": 0,
+            "missing": 0,
+        }
+        missing_normalization = []
+        for info_path in info_files:
+            meta = info_path.parent
+            if (meta / "stats.json").is_file():
+                normalization_sources["stats.json"] += 1
+            elif (meta / "episodes_stats.jsonl").is_file():
+                normalization_sources["episodes_stats.jsonl"] += 1
+            else:
+                normalization_sources["missing"] += 1
+                missing_normalization.append(str(meta))
+        report["normalization_sources"] = normalization_sources
+        report["sample_missing_normalization"] = missing_normalization[:10]
+        if missing_normalization:
+            failures.append(
+                f"{len(missing_normalization)} subdatasets have neither stats.json "
+                "nor episodes_stats.jsonl"
+            )
     if config.model.text_backend == "t5":
         text_path = Path(config.model.text_model).expanduser()
         text_available = text_path.is_dir()
