@@ -1,0 +1,24 @@
+model:
+  checkpoint: /mnt/sfs_turbo/fyy/checkpoints/vjepa2/vjepa2_1_vitG_384.pt
+  text_backend: hash
+
+data:
+  root: /mnt/sfs_turbo/rl/InternData-A1/sim
+  backend: lerobot_v21
+  max_subdatasets: 1
+  max_episodes_per_subdataset: 1
+  sample_stride: 60
+
+train:
+  run_name: interndata_a1_tiny_overfit
+  output_root: outputs
+  stage: joint
+  max_steps: 100
+  batch_size_per_gpu: 1
+  grad_accum_steps: 1
+  num_workers: 0
+  predictor_lr: 1.0e-5
+  new_module_lr: 1.0e-3
+  log_every: 1
+  save_every: 50
+  bf16: true

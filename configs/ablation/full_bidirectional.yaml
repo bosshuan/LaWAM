@@ -1,0 +1,6 @@
+model:
+  joint_attention: full
+
+train:
+  run_name: ablation_full_bidirectional
+  stage: joint

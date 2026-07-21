@@ -1,0 +1,6 @@
+model:
+  joint_attention: one_way
+
+train:
+  run_name: ablation_one_way_future_to_action
+  stage: joint

@@ -1,0 +1,23 @@
+model:
+  checkpoint: /mnt/sfs_turbo/fyy/checkpoints/vjepa2/vjepa2_1_vitG_384.pt
+  text_backend: t5
+  text_model: google-t5/t5-large
+  text_local_files_only: true
+
+data:
+  root: /mnt/sfs_turbo/rl/InternData-A1/sim
+  backend: lerobot_v21
+
+train:
+  run_name: interndata_a1_stage1_future
+  output_root: outputs
+  stage: future
+  max_steps: 20000
+  batch_size_per_gpu: 1
+  grad_accum_steps: 8
+  num_workers: 4
+  predictor_lr: 1.0e-5
+  new_module_lr: 3.0e-4
+  log_every: 10
+  save_every: 1000
+  bf16: true

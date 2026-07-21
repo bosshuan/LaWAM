@@ -1,0 +1,425 @@
+from __future__ import annotations
+
+import bisect
+import json
+import re
+from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pyarrow.parquet as pq
+import torch
+from torch.utils.data import Dataset
+
+from latent_wam.config import ExperimentConfig
+from latent_wam.data.schema import (
+    ActionSchema,
+    ActionSchemaAdapter,
+    FeatureNorm,
+    stable_bucket,
+)
+from latent_wam.data.video import decode_selected_frames, preprocess_vjepa_clip
+from latent_wam.types import (
+    StudentInputs,
+    TeacherInputs,
+    TrainingBatch,
+    TrainingTargets,
+)
+
+
+@dataclass(frozen=True)
+class EpisodeRecord:
+    subdataset_index: int
+    parquet_path: Path
+    video_path: Path
+    episode_index: int
+    rows: int
+    first_anchor: int
+    anchors: int
+
+
+@dataclass(frozen=True)
+class SubdatasetRecord:
+    root: Path
+    name: str
+    fps: float
+    camera_key: str
+    robot_type: str
+    tasks: dict[int, str]
+    schema: ActionSchema
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.is_file():
+        return []
+    rows = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
+
+
+def _feature_size(feature: dict[str, Any]) -> int:
+    shape = feature.get("shape", [1])
+    return int(np.prod(shape))
+
+
+def _select_feature_keys(features: dict[str, Any], prefix: str) -> tuple[str, ...]:
+    keys = []
+    for key in sorted(features):
+        if not key.startswith(prefix):
+            continue
+        if key.startswith("master_actions"):
+            continue
+        if any(token in key for token in ("joint.position", "gripper.position", "gripper.openness")):
+            keys.append(key)
+    return tuple(keys)
+
+
+def _parse_norms(stats: dict[str, Any], keys: tuple[str, ...]) -> dict[str, FeatureNorm]:
+    result: dict[str, FeatureNorm] = {}
+    for key in keys:
+        entry = stats.get(key, {})
+        if not isinstance(entry, dict) or "mean" not in entry or "std" not in entry:
+            continue
+        mean = np.asarray(entry["mean"], dtype=np.float32).reshape(-1)
+        std = np.asarray(entry["std"], dtype=np.float32).reshape(-1)
+        result[key] = FeatureNorm(mean=mean, std=std)
+    return result
+
+
+def _select_camera(features: dict[str, Any], requested: str) -> str:
+    video_keys = [
+        key for key, value in features.items() if value.get("dtype") == "video"
+    ]
+    if requested != "auto":
+        if requested not in video_keys:
+            raise KeyError(f"Requested camera {requested} is not in {video_keys}")
+        return requested
+    priorities = ("images.rgb.head", "observation.images.main", "observation.images.head")
+    for key in priorities:
+        if key in video_keys:
+            return key
+    head = [key for key in video_keys if "head" in key or "main" in key]
+    if head:
+        return sorted(head)[0]
+    if not video_keys:
+        raise ValueError("Subdataset has no video feature")
+    return sorted(video_keys)[0]
+
+
+def _episode_number(path: Path) -> int:
+    match = re.search(r"episode_(\d+)", path.stem)
+    return int(match.group(1)) if match else -1
+
+
+def _video_for_episode(root: Path, parquet: Path, camera_key: str) -> Path:
+    chunk = parquet.parent.name
+    direct = root / "videos" / chunk / camera_key / f"{parquet.stem}.mp4"
+    if direct.is_file():
+        return direct
+    matches = list((root / "videos").glob(f"**/{camera_key}/{parquet.stem}.mp4"))
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        return direct
+    raise RuntimeError(f"Ambiguous video files for {parquet}: {matches}")
+
+
+@lru_cache(maxsize=8)
+def _read_episode_table(path: str):
+    return pq.read_table(path)
+
+
+def _table_rows(table, indices: list[int], keys: tuple[str, ...]) -> list[dict[str, Any]]:
+    selected = table.select(list(keys)).take(indices)
+    columns = {key: selected[key].to_pylist() for key in keys}
+    return [
+        {key: columns[key][row] for key in keys}
+        for row in range(len(indices))
+    ]
+
+
+class InternDataA1Dataset(Dataset[TrainingBatch]):
+    """Direct reader for InternData-A1 LeRobot v2.1 subdatasets."""
+
+    def __init__(self, config: ExperimentConfig, split: str = "train"):
+        if config.data.backend != "lerobot_v21":
+            raise ValueError("This MVP supports the official LeRobot v2.1 layout only")
+        if split not in {"train", "val"}:
+            raise ValueError("split must be train or val")
+        self.config = config
+        self.split = split
+        self.root = Path(config.data.root).expanduser()
+        if not self.root.is_dir():
+            raise FileNotFoundError(f"InternData-A1 root does not exist: {self.root}")
+        self.subdatasets: list[SubdatasetRecord] = []
+        self.episodes: list[EpisodeRecord] = []
+        self._cumulative: list[int] = []
+        self._discover()
+        if not self.episodes:
+            raise RuntimeError(
+                f"No usable LeRobot v2.1 episodes found under {self.root}. "
+                "Run latent-wam-preflight to inspect the downloaded subset."
+            )
+
+    def _discover(self):
+        info_paths: set[Path] = set()
+        for pattern in self.config.data.include_globs:
+            info_paths.update(self.root.glob(pattern))
+        paths = [
+            path
+            for path in sorted(info_paths)
+            if not any(token in str(path) for token in self.config.data.exclude_contains)
+        ]
+        if self.config.data.max_subdatasets is not None:
+            paths = paths[: self.config.data.max_subdatasets]
+        total = 0
+        for info_path in paths:
+            info = _read_json(info_path)
+            version = str(info.get("codebase_version", ""))
+            if version and not version.startswith("v2"):
+                continue
+            root = info_path.parent.parent
+            features = info.get("features", {})
+            action_keys = _select_feature_keys(features, "actions.")
+            state_keys = _select_feature_keys(features, "states.")
+            if not action_keys or not state_keys:
+                continue
+            camera = _select_camera(features, self.config.video.camera_key)
+            stats_path = root / "meta" / "stats.json"
+            if not stats_path.is_file():
+                raise FileNotFoundError(
+                    f"Missing normalization statistics for {root}: {stats_path}"
+                )
+            stats = _read_json(stats_path)
+            action_norms = _parse_norms(stats, action_keys)
+            state_norms = _parse_norms(stats, state_keys)
+            missing_norms = [
+                key
+                for key in (*action_keys, *state_keys)
+                if not ("gripper" in key and "openness" in key)
+                and key not in action_norms
+                and key not in state_norms
+            ]
+            if missing_norms:
+                raise ValueError(
+                    f"Missing mean/std statistics in {stats_path} for {missing_norms}"
+                )
+            robot_type = str(info.get("robot_type", root.parent.name))
+            schema_name = f"{robot_type}:{'|'.join(action_keys)}"
+            cursor, gripper_ranges = 0, []
+            action_sizes = tuple(_feature_size(features[key]) for key in action_keys)
+            for key, size in zip(action_keys, action_sizes):
+                if "gripper" in key:
+                    gripper_ranges.append((cursor, cursor + size))
+                cursor += size
+            schema = ActionSchema(
+                name=schema_name,
+                robot_type=robot_type,
+                action_keys=action_keys,
+                state_keys=state_keys,
+                action_sizes=action_sizes,
+                state_sizes=tuple(_feature_size(features[key]) for key in state_keys),
+                gripper_ranges=tuple(gripper_ranges),
+                action_norms=action_norms,
+                state_norms=state_norms,
+            )
+            ActionSchemaAdapter(
+                schema,
+                self.config.action.max_action_dim,
+                self.config.action.max_proprio_dim,
+            )
+            task_rows = _read_jsonl(root / "meta" / "tasks.jsonl")
+            tasks = {
+                int(row.get("task_index", index)): str(
+                    row.get("task", row.get("name", root.name.replace("_", " ")))
+                )
+                for index, row in enumerate(task_rows)
+            }
+            record = SubdatasetRecord(
+                root=root,
+                name=str(root.relative_to(self.root)),
+                fps=float(info.get("fps", 30)),
+                camera_key=camera,
+                robot_type=robot_type,
+                tasks=tasks,
+                schema=schema,
+            )
+            subdataset_index = len(self.subdatasets)
+            self.subdatasets.append(record)
+            parquets = sorted((root / "data").glob("**/episode_*.parquet"))
+            if self.config.data.max_episodes_per_subdataset is not None:
+                parquets = parquets[: self.config.data.max_episodes_per_subdataset]
+            for parquet in parquets:
+                episode_index = _episode_number(parquet)
+                fraction_key = (episode_index * 2654435761) % 1000000 / 1000000.0
+                in_train = fraction_key < self.config.data.train_fraction
+                if (self.split == "train") != in_train:
+                    continue
+                rows = pq.ParquetFile(parquet).metadata.num_rows
+                first, count = self._anchor_range(rows, record.fps)
+                if count <= 0:
+                    continue
+                video = _video_for_episode(root, parquet, camera)
+                if not video.is_file():
+                    continue
+                self.episodes.append(
+                    EpisodeRecord(
+                        subdataset_index,
+                        parquet,
+                        video,
+                        episode_index,
+                        rows,
+                        first,
+                        count,
+                    )
+                )
+                total += count
+                self._cumulative.append(total)
+
+    def _anchor_range(self, rows: int, fps: float) -> tuple[int, int]:
+        context_span = (self.config.video.context_frames - 1) / self.config.video.video_fps
+        state_span = (self.config.action.proprio_history - 1) / self.config.action.action_hz
+        past_span = self.config.action.past_action_history / self.config.action.action_hz
+        before = int(np.ceil(max(context_span, state_span, past_span) * fps))
+        after = int(np.ceil(max(
+            self.config.video.future_frames / self.config.video.video_fps,
+            self.config.action.chunk_size / self.config.action.action_hz,
+        ) * fps))
+        last = rows - 1 - after
+        if last < before:
+            return before, 0
+        stride = self.config.data.sample_stride
+        return before, (last - before) // stride + 1
+
+    def __len__(self):
+        return self._cumulative[-1]
+
+    def _locate(self, index: int) -> tuple[EpisodeRecord, int]:
+        if index < 0:
+            index += len(self)
+        if index < 0 or index >= len(self):
+            raise IndexError(index)
+        episode_pos = bisect.bisect_right(self._cumulative, index)
+        previous = 0 if episode_pos == 0 else self._cumulative[episode_pos - 1]
+        episode = self.episodes[episode_pos]
+        anchor = episode.first_anchor + (index - previous) * self.config.data.sample_stride
+        return episode, anchor
+
+    @staticmethod
+    def _indices(anchor: int, offsets: np.ndarray, fps: float) -> list[int]:
+        return [int(round(anchor + offset * fps)) for offset in offsets]
+
+    def __getitem__(self, index: int) -> TrainingBatch:
+        episode, anchor = self._locate(index)
+        source = self.subdatasets[episode.subdataset_index]
+        video = self.config.video
+        action = self.config.action
+        context_offsets = np.arange(-(video.context_frames - 1), 1) / video.video_fps
+        future_offsets = np.arange(1, video.future_frames + 1) / video.video_fps
+        visual_indices = self._indices(anchor, np.concatenate([context_offsets, future_offsets]), source.fps)
+        frames = decode_selected_frames(
+            episode.video_path,
+            visual_indices,
+            source.fps,
+            self.config.data.decode_threads,
+        )
+        full_rgb = preprocess_vjepa_clip(frames, video.resolution)
+        context_rgb = full_rgb[:, : video.context_frames]
+
+        target_indices = self._indices(
+            anchor,
+            np.arange(1, action.chunk_size + 1) / action.action_hz,
+            source.fps,
+        )
+        proprio_indices = self._indices(
+            anchor,
+            np.arange(-(action.proprio_history - 1), 1) / action.action_hz,
+            source.fps,
+        )
+        past_action_indices = self._indices(
+            anchor,
+            -np.arange(action.past_action_history, 0, -1) / action.action_hz,
+            source.fps,
+        )
+        table = _read_episode_table(str(episode.parquet_path))
+        adapter = ActionSchemaAdapter(
+            source.schema, action.max_action_dim, action.max_proprio_dim
+        )
+        action_rows = _table_rows(table, target_indices, source.schema.action_keys)
+        target, target_valid, gripper = adapter.encode_actions(action_rows)
+        proprio_rows = _table_rows(table, proprio_indices, source.schema.state_keys)
+        proprio, proprio_valid = adapter.encode_states(proprio_rows)
+        past_rows = _table_rows(table, past_action_indices, source.schema.action_keys)
+        past_actions, past_valid_components, _ = adapter.encode_actions(past_rows)
+
+        task_index = 0
+        if "task_index" in table.column_names:
+            value = table["task_index"][anchor].as_py()
+            task_index = int(value[0] if isinstance(value, list) else value)
+        instruction = source.tasks.get(task_index, source.root.name.replace("_", " "))
+        schema_id = stable_bucket(source.schema.name, action.schema_buckets)
+        embodiment_id = stable_bucket(source.robot_type, action.schema_buckets)
+        return TrainingBatch(
+            student=StudentInputs(
+                context_rgb=context_rgb,
+                instructions=[instruction],
+                proprio=torch.from_numpy(proprio),
+                proprio_valid=torch.from_numpy(proprio_valid),
+                past_actions=torch.from_numpy(past_actions),
+                past_action_valid=torch.from_numpy(past_valid_components.any(axis=1)),
+                embodiment_ids=torch.tensor([embodiment_id], dtype=torch.long),
+                schema_ids=torch.tensor([schema_id], dtype=torch.long),
+            ),
+            teacher=TeacherInputs(full_rgb=full_rgb),
+            targets=TrainingTargets(
+                actions=torch.from_numpy(target),
+                action_valid=torch.from_numpy(target_valid),
+                gripper_mask=torch.from_numpy(gripper),
+                metadata=[
+                    {
+                        "subdataset": source.name,
+                        "episode": episode.episode_index,
+                        "anchor": anchor,
+                        "camera": source.camera_key,
+                        "schema": source.schema.name,
+                    }
+                ],
+            ),
+        )
+
+
+def collate_training_batch(samples: list[TrainingBatch]) -> TrainingBatch:
+    if not samples:
+        raise ValueError("Cannot collate an empty batch")
+    return TrainingBatch(
+        student=StudentInputs(
+            context_rgb=torch.stack([sample.student.context_rgb for sample in samples]),
+            instructions=[sample.student.instructions[0] for sample in samples],
+            proprio=torch.stack([sample.student.proprio for sample in samples]),
+            proprio_valid=torch.stack([sample.student.proprio_valid for sample in samples]),
+            past_actions=torch.stack([sample.student.past_actions for sample in samples]),
+            past_action_valid=torch.stack([sample.student.past_action_valid for sample in samples]),
+            embodiment_ids=torch.cat([sample.student.embodiment_ids for sample in samples]),
+            schema_ids=torch.cat([sample.student.schema_ids for sample in samples]),
+        ),
+        teacher=TeacherInputs(
+            full_rgb=torch.stack([sample.teacher.full_rgb for sample in samples])
+        ),
+        targets=TrainingTargets(
+            actions=torch.stack([sample.targets.actions for sample in samples]),
+            action_valid=torch.stack([sample.targets.action_valid for sample in samples]),
+            gripper_mask=torch.stack([sample.targets.gripper_mask for sample in samples]),
+            metadata=[sample.targets.metadata[0] for sample in samples],
+        ),
+    )

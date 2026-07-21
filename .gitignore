@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+outputs/
+checkpoints/
+wandb/
+*.pt
+*.pth
+*.pth.tar
+LaWAM_Paper_Algorithm_Spec.md
+
+# Server-local path overrides and generated manifests
+configs/local/
+*.manifest.json
