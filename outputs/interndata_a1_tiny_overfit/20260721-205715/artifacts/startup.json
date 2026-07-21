@@ -1,0 +1,19 @@
+{
+  "checkpoint": "/mnt/sfs_turbo/fyy/checkpoints/vjepa2/vjepa2_1_vitG_384.pt",
+  "encoder_key": "target_encoder",
+  "encoder_parameters": 1845216768,
+  "predictor_parameters": 59433472,
+  "encoder_layers": 48,
+  "predictor_layers": 24,
+  "encoder_embed_dim": 1664,
+  "predictor_embed_dim": 384,
+  "world_size": 1,
+  "samples": 12,
+  "output_dir": "/mnt/sfs_turbo/fyy/LaWAM/outputs/interndata_a1_tiny_overfit/20260721-205715",
+  "stage": "joint",
+  "trainable_student_parameters": 60527396,
+  "optimizer_groups": {
+    "predictor": 56867456,
+    "new": 3659940
+  }
+}

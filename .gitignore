@@ -5,14 +5,15 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .DS_Store
-outputs/
+outputs/checkpoints/
 checkpoints/
 wandb/
 *.pt
 *.pth
 *.pth.tar
 LaWAM_Paper_Algorithm_Spec.md
-
+src/latent_wam/__pycache__
+src/latent_wam.egg-info
 # Server-local path overrides and generated manifests
 configs/local/
 *.manifest.json
