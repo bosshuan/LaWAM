@@ -27,3 +27,20 @@ def test_rejects_checkpoint_incompatible_predictor_shape():
     )
     with pytest.raises(ValueError, match="8 mask tokens"):
         config.validate()
+
+
+def test_rejects_invalid_debug_sampling_and_lr_schedule():
+    base = ExperimentConfig()
+    negative_sample = dataclasses.replace(
+        base,
+        data=dataclasses.replace(base.data, fixed_sample_index=-1),
+    )
+    with pytest.raises(ValueError, match="fixed_sample_index"):
+        negative_sample.validate()
+
+    invalid_schedule = dataclasses.replace(
+        base,
+        train=dataclasses.replace(base.train, lr_schedule="linear"),
+    )
+    with pytest.raises(ValueError, match="lr_schedule"):
+        invalid_schedule.validate()

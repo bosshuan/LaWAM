@@ -5,6 +5,7 @@ import dataclasses
 import json
 import math
 import random
+import time
 from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
@@ -36,11 +37,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train LatentWAM")
     parser.add_argument("--config", required=True)
     parser.add_argument("--max-steps", type=int)
+    parser.add_argument("--stop-after", type=int)
     parser.add_argument("--output-dir")
     parser.add_argument("--resume")
     parser.add_argument("--init-student")
     parser.add_argument("--checkpoint")
     parser.add_argument("--data-root")
+    parser.add_argument("--fixed-sample-index", type=int)
     parser.add_argument("--text-model")
     return parser.parse_args()
 
@@ -55,6 +58,8 @@ def apply_overrides(config: ExperimentConfig, args) -> ExperimentConfig:
         model = dataclasses.replace(model, text_model=args.text_model)
     if args.data_root:
         data = dataclasses.replace(data, root=args.data_root)
+    if args.fixed_sample_index is not None:
+        data = dataclasses.replace(data, fixed_sample_index=args.fixed_sample_index)
     if args.max_steps is not None:
         train = dataclasses.replace(train, max_steps=args.max_steps)
     if args.resume:
@@ -133,6 +138,9 @@ def build_optimizer(student, config: ExperimentConfig):
 
 
 def build_scheduler(optimizer, config: ExperimentConfig):
+    if config.train.lr_schedule == "constant":
+        return torch.optim.lr_scheduler.LambdaLR(optimizer, lambda _step: 1.0)
+
     warmup = max(1, int(config.train.max_steps * config.train.warmup_fraction))
 
     def schedule(step):
@@ -191,6 +199,15 @@ def main():
     start_step = 0
     if config.train.resume:
         start_step = load_training_checkpoint(config.train.resume, student, optimizer, scheduler)
+    end_step = config.train.max_steps
+    if args.stop_after is not None:
+        if args.stop_after <= 0 or args.stop_after > config.train.max_steps:
+            raise ValueError("--stop-after must be in (0, train.max_steps]")
+        end_step = args.stop_after
+    if start_step > end_step:
+        raise ValueError(
+            f"Checkpoint step {start_step} is later than requested stop step {end_step}"
+        )
 
     if rank == 0:
         report = dataclasses.asdict(model.load_report)
@@ -200,6 +217,13 @@ def main():
                 "samples": len(dataset),
                 "output_dir": str(output_dir),
                 "stage": config.train.stage,
+                "requested_stop_after": end_step,
+                "data": dataset.audit_summary(),
+                "global_batch_size": (
+                    config.train.batch_size_per_gpu
+                    * config.train.grad_accum_steps
+                    * world_size
+                ),
                 "trainable_student_parameters": sum(
                     parameter.numel()
                     for parameter in model.student.parameters()
@@ -218,10 +242,15 @@ def main():
     data_iterator = iter(loader)
     epoch = 0
     log_path = output_dir / "logs" / "train.jsonl"
+    last_saved_step: int | None = None
     try:
-        for step in range(start_step, config.train.max_steps):
+        for step in range(start_step, end_step):
+            step_started = time.perf_counter()
+            data_time = 0.0
+            torch.cuda.reset_peak_memory_stats(device)
             metrics_accum: dict[str, float] = {}
             for micro_step in range(config.train.grad_accum_steps):
+                data_started = time.perf_counter()
                 try:
                     batch = next(data_iterator)
                 except StopIteration:
@@ -230,6 +259,7 @@ def main():
                         sampler.set_epoch(epoch)
                     data_iterator = iter(loader)
                     batch = next(data_iterator)
+                data_time += time.perf_counter() - data_started
                 batch = batch.to(device)
                 should_sync = micro_step == config.train.grad_accum_steps - 1
                 sync_context = nullcontext() if should_sync or world_size == 1 else student.no_sync()
@@ -265,8 +295,21 @@ def main():
 
             completed = step + 1
             if completed % config.train.log_every == 0:
+                torch.cuda.synchronize(device)
+                step_time = time.perf_counter() - step_started
                 metrics_accum["grad_norm"] = float(gradient_norm)
                 metrics_accum["step"] = float(completed)
+                metrics_accum["step_time_sec"] = step_time
+                metrics_accum["data_time_sec"] = data_time
+                metrics_accum["samples_per_sec"] = (
+                    config.train.batch_size_per_gpu
+                    * config.train.grad_accum_steps
+                    * world_size
+                    / max(step_time, 1.0e-9)
+                )
+                metrics_accum["peak_memory_gib"] = (
+                    torch.cuda.max_memory_allocated(device) / 2**30
+                )
                 for group in optimizer.param_groups:
                     metrics_accum[f"lr_{group['name']}"] = group["lr"]
                 metrics = reduce_metrics(metrics_accum, device)
@@ -274,7 +317,7 @@ def main():
                     with log_path.open("a", encoding="utf-8") as handle:
                         handle.write(json.dumps(metrics, sort_keys=True) + "\n")
                     print(json.dumps(metrics, sort_keys=True), flush=True)
-            if completed % config.train.save_every == 0:
+            if completed % config.train.save_every == 0 and completed < end_step:
                 barrier()
                 if rank == 0:
                     save_training_checkpoint(
@@ -285,17 +328,28 @@ def main():
                         completed,
                         dataclasses.asdict(config),
                     )
+                    last_saved_step = completed
                 barrier()
         barrier()
         if rank == 0:
-            save_training_checkpoint(
-                output_dir / "checkpoints" / "final.pt",
-                student,
-                optimizer,
-                scheduler,
-                config.train.max_steps,
-                dataclasses.asdict(config),
-            )
+            if end_step == config.train.max_steps:
+                save_training_checkpoint(
+                    output_dir / "checkpoints" / "final.pt",
+                    student,
+                    optimizer,
+                    scheduler,
+                    end_step,
+                    dataclasses.asdict(config),
+                )
+            elif last_saved_step != end_step:
+                save_training_checkpoint(
+                    output_dir / "checkpoints" / f"step_{end_step:08d}.pt",
+                    student,
+                    optimizer,
+                    scheduler,
+                    end_step,
+                    dataclasses.asdict(config),
+                )
         barrier()
     finally:
         cleanup()

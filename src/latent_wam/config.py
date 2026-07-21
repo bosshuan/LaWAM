@@ -63,6 +63,7 @@ class DataConfig:
     sample_stride: int = 10
     max_subdatasets: int | None = None
     max_episodes_per_subdataset: int | None = None
+    fixed_sample_index: int | None = None
     decode_threads: int = 1
     train_fraction: float = 0.995
     seed: int = 239
@@ -89,6 +90,7 @@ class TrainConfig:
     num_workers: int = 4
     predictor_lr: float = 1.0e-5
     new_module_lr: float = 3.0e-4
+    lr_schedule: str = "cosine"
     min_lr_ratio: float = 0.01
     weight_decay: float = 0.05
     warmup_fraction: float = 0.05
@@ -149,6 +151,8 @@ class ExperimentConfig:
             raise ValueError("text token count must be positive and hash_vocab_size must exceed 2")
         if self.train.stage not in {"future", "action_warmup", "joint"}:
             raise ValueError("stage must be future, action_warmup, or joint")
+        if self.train.lr_schedule not in {"cosine", "constant"}:
+            raise ValueError("lr_schedule must be cosine or constant")
         positive_train_values = (
             self.action.chunk_size,
             self.action.action_hz,
@@ -166,6 +170,8 @@ class ExperimentConfig:
             raise ValueError("num_workers cannot be negative")
         if self.data.sample_stride <= 0:
             raise ValueError("sample_stride must be positive")
+        if self.data.fixed_sample_index is not None and self.data.fixed_sample_index < 0:
+            raise ValueError("fixed_sample_index cannot be negative")
         if not 0.0 < self.data.train_fraction < 1.0:
             raise ValueError("train_fraction must be between 0 and 1")
         if self.loss.huber_delta <= 0:

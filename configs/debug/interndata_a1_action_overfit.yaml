@@ -11,14 +11,13 @@ data:
   fixed_sample_index: 0
 
 train:
-  run_name: interndata_a1_tiny_overfit
+  run_name: interndata_a1_action_overfit
   output_root: outputs
-  stage: joint
-  max_steps: 300
+  stage: action_warmup
+  max_steps: 200
   batch_size_per_gpu: 1
   grad_accum_steps: 1
   num_workers: 0
-  predictor_lr: 1.0e-4
   new_module_lr: 1.0e-3
   lr_schedule: constant
   weight_decay: 0.0

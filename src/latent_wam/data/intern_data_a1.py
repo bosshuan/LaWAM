@@ -260,6 +260,16 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
                 f"No usable LeRobot v2.1 episodes found under {self.root}. "
                 "Run latent-wam-preflight to inspect the downloaded subset."
             )
+        self._raw_samples = self._cumulative[-1]
+        self._fixed_sample_index = config.data.fixed_sample_index
+        if (
+            self._fixed_sample_index is not None
+            and self._fixed_sample_index >= self._raw_samples
+        ):
+            raise IndexError(
+                f"fixed_sample_index {self._fixed_sample_index} is outside "
+                f"the discovered dataset of {self._raw_samples} samples"
+            )
 
     def _discover(self):
         info_paths: set[Path] = set()
@@ -397,18 +407,62 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
         return before, (last - before) // stride + 1
 
     def __len__(self):
-        return self._cumulative[-1]
+        return 1 if self._fixed_sample_index is not None else self._raw_samples
 
     def _locate(self, index: int) -> tuple[EpisodeRecord, int]:
         if index < 0:
             index += len(self)
         if index < 0 or index >= len(self):
             raise IndexError(index)
-        episode_pos = bisect.bisect_right(self._cumulative, index)
+        raw_index = (
+            self._fixed_sample_index
+            if self._fixed_sample_index is not None
+            else index
+        )
+        assert raw_index is not None
+        episode_pos = bisect.bisect_right(self._cumulative, raw_index)
         previous = 0 if episode_pos == 0 else self._cumulative[episode_pos - 1]
         episode = self.episodes[episode_pos]
-        anchor = episode.first_anchor + (index - previous) * self.config.data.sample_stride
+        anchor = episode.first_anchor + (
+            raw_index - previous
+        ) * self.config.data.sample_stride
         return episode, anchor
+
+    def audit_summary(self) -> dict[str, Any]:
+        """Return lightweight schema and sampling metadata for startup logs."""
+        if self._fixed_sample_index is not None:
+            episode, anchor = self._locate(0)
+            selected_indices = {episode.subdataset_index}
+            fixed_sample = {
+                "raw_index": self._fixed_sample_index,
+                "episode": episode.episode_index,
+                "anchor": anchor,
+            }
+        else:
+            selected_indices = {episode.subdataset_index for episode in self.episodes}
+            fixed_sample = None
+        schema_variants: dict[str, dict[str, Any]] = {}
+        for index in sorted(selected_indices):
+            record = self.subdatasets[index]
+            schema = record.schema
+            schema_variants.setdefault(
+                schema.name,
+                {
+                    "schema": schema.name,
+                    "robot_type": schema.robot_type,
+                    "action_keys": list(schema.action_keys),
+                    "state_keys": list(schema.state_keys),
+                    "action_dim": schema.action_dim,
+                    "state_dim": schema.state_dim,
+                    "normalization_source": record.normalization_source,
+                },
+            )
+        return {
+            "raw_samples": self._raw_samples,
+            "effective_samples": len(self),
+            "fixed_sample": fixed_sample,
+            "schema_variants": list(schema_variants.values()),
+        }
 
     @staticmethod
     def _indices(anchor: int, offsets: np.ndarray, fps: float) -> list[int]:

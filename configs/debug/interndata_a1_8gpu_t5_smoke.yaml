@@ -1,0 +1,24 @@
+model:
+  checkpoint: /mnt/sfs_turbo/fyy/checkpoints/vjepa2/vjepa2_1_vitG_384.pt
+  text_backend: t5
+  text_model: /mnt/sfs_turbo/fyy/checkpoints/text/t5-large
+  text_local_files_only: true
+
+data:
+  root: /mnt/sfs_turbo/rl/InternData-A1/sim
+  backend: lerobot_v21
+  max_subdatasets: 1
+  max_episodes_per_subdataset: 8
+  sample_stride: 30
+
+train:
+  run_name: interndata_a1_8gpu_t5_smoke
+  output_root: outputs
+  stage: joint
+  max_steps: 20
+  batch_size_per_gpu: 1
+  grad_accum_steps: 1
+  num_workers: 2
+  log_every: 1
+  save_every: 10
+  bf16: true

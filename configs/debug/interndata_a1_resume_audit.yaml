@@ -11,10 +11,10 @@ data:
   fixed_sample_index: 0
 
 train:
-  run_name: interndata_a1_tiny_overfit
+  run_name: interndata_a1_resume_audit
   output_root: outputs
   stage: joint
-  max_steps: 300
+  max_steps: 6
   batch_size_per_gpu: 1
   grad_accum_steps: 1
   num_workers: 0

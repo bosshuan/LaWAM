@@ -9,6 +9,7 @@ from pathlib import Path
 import torch
 
 from latent_wam.config import load_config, resolve_output_root
+from latent_wam.data.intern_data_a1 import _feature_size, _select_feature_keys
 
 
 def parse_args():
@@ -133,6 +134,47 @@ def main():
                 f"{len(missing_normalization)} subdatasets have neither stats.json "
                 "nor episodes_stats.jsonl"
             )
+        schema_variants: dict[str, dict] = {}
+        unsupported_control_schema = []
+        invalid_info_files = []
+        for info_path in info_files:
+            try:
+                with info_path.open("r", encoding="utf-8") as handle:
+                    info = json.load(handle)
+                features = info.get("features", {})
+                action_keys = _select_feature_keys(features, "actions.")
+                state_keys = _select_feature_keys(features, "states.")
+                if not action_keys or not state_keys:
+                    unsupported_control_schema.append(str(info_path))
+                    continue
+                robot_type = str(info.get("robot_type", info_path.parent.parent.name))
+                variant_name = f"{robot_type}:{'|'.join(action_keys)}"
+                variant = schema_variants.setdefault(
+                    variant_name,
+                    {
+                        "robot_type": robot_type,
+                        "action_keys": list(action_keys),
+                        "state_keys": list(state_keys),
+                        "action_dim": sum(_feature_size(features[key]) for key in action_keys),
+                        "state_dim": sum(_feature_size(features[key]) for key in state_keys),
+                        "binary_gripper": any(
+                            "gripper" in key and "openness" in key
+                            for key in action_keys
+                        ),
+                        "subdatasets": 0,
+                    },
+                )
+                variant["subdatasets"] += 1
+            except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as error:
+                invalid_info_files.append({"path": str(info_path), "error": str(error)})
+        report["control_schema_variants"] = list(schema_variants.values())
+        report["unsupported_control_schema_count"] = len(unsupported_control_schema)
+        report["sample_unsupported_control_schema"] = unsupported_control_schema[:10]
+        report["invalid_info_files"] = invalid_info_files[:10]
+        if info_files and not schema_variants:
+            failures.append("No subdataset exposes a supported joint/gripper control schema")
+        if invalid_info_files:
+            failures.append(f"{len(invalid_info_files)} meta/info.json files are invalid")
     if config.model.text_backend == "t5":
         text_path = Path(config.model.text_model).expanduser()
         text_available = text_path.is_dir()

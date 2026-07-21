@@ -76,11 +76,36 @@ bash scripts/debug/run_checkpoint_audit.sh
 bash scripts/debug/run_tests.sh
 bash scripts/debug/run_1gpu_smoke.sh
 bash scripts/debug/run_8gpu_smoke.sh
-bash scripts/debug/run_tiny_overfit.sh
 ```
 
 After the Conda environment is active, the first five bring-up checks can also be
 run sequentially with `bash scripts/debug/bringup_8gpu.sh`.
+
+After the basic smoke tests, run the strict correctness suite on one A100. It
+uses exactly one fixed anchor and constant learning rates, and independently
+checks future-only, action-only, and joint optimization:
+
+```bash
+bash scripts/debug/run_strict_overfit.sh
+```
+
+Then compare an uninterrupted six-step run against a three-step run resumed
+from checkpoint. The audit fails unless every student tensor matches exactly:
+
+```bash
+bash scripts/debug/run_resume_audit.sh
+```
+
+Once both checks pass, validate the real frozen T5-large path and run a short
+8xA100 T5 smoke test:
+
+```bash
+bash scripts/debug/preflight_t5_a100.sh --skip-checksum
+bash scripts/debug/run_8gpu_t5_smoke.sh
+```
+
+Pass `--text-model /absolute/local/path/to/t5-large` to both T5 commands when
+the server path differs from the checked-in default.
 
 The smoke config deliberately uses the local hash text encoder so the training
 path can be validated without downloading T5. Scientific training uses frozen
