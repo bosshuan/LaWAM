@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "latent-wam"
 version = "0.1.0"
 description = "Joint latent-future and action prediction inside a V-JEPA 2.1 predictor"
-requires-python = ">=3.10"
+requires-python = ">=3.12,<3.13"
 dependencies = [
   "av>=12.0",
   "einops>=0.7",

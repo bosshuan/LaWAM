@@ -53,16 +53,18 @@ outputs/<run-name>/<timestamp>/
 Create and activate the environment manually from the repository root:
 
 ```bash
-conda create --name lawam python=3.10 pip --yes
-conda activate lawam
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install --requirement requirements.txt
-python -m pip install --no-deps --editable .
+conda create --name lawam-312 python=3.12 pip --yes
+conda activate lawam-312
+pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
+pip install -e .
 ```
 
 The run scripts use the Python interpreter from the active Conda environment
 and fail early when no Conda environment is active. No environment setup script
-is required.
+is required. The final editable-install command is mandatory because this
+repository uses a `src/` package layout; without it, commands such as
+`python -m latent_wam.preflight` cannot import `latent_wam`.
 
 ## 8xA100 bring-up
 
