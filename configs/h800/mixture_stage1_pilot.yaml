@@ -1,0 +1,48 @@
+model:
+  checkpoint: /opt/huawei/dataset/d_env_wulan/vjepa2/checkpoints/vjepa2_1_vitG_384.pt
+  text_backend: t5
+  text_model: /opt/huawei/dataset/d_env_wulan/text/t5-large
+  text_local_files_only: true
+
+data:
+  backend: lerobot_v21
+  roots:
+    - /opt/huawei/dataset/data_w/processed/OXE
+    - /opt/huawei/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1
+    - /opt/huawei/dataset/d_data_wulan/datasets/InternData-A1
+    - /opt/huawei/dataset/data_w/processed/RoboMind
+    - /opt/huawei/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized
+  source_names:
+    - oxe
+    - agibot_world
+    - interndata_a1
+    - robomind
+    - robotwin
+  # Equal source probability is an engineering-pilot choice, not the final
+  # scientific mixture. Replace these explicit weights after manifest review.
+  mixture_weights: [1.0, 1.0, 1.0, 1.0, 1.0]
+  mixture_epoch_samples: 3200
+  strict_manifest: true
+  sample_stride: 10
+  max_subdatasets: null
+  max_episodes_per_subdataset: null
+
+train:
+  run_name: h800_4node_stage1_mixture_pilot
+  output_root: outputs
+  stage: future
+  max_steps: 50
+  batch_size_per_gpu: 1
+  grad_accum_steps: 2
+  num_workers: 2
+  predictor_lr: 1.0e-5
+  new_module_lr: 3.0e-4
+  lr_schedule: cosine
+  min_lr_ratio: 0.01
+  weight_decay: 0.05
+  warmup_fraction: 0.05
+  gradient_clip: 1.0
+  log_every: 5
+  save_every: 25
+  bf16: true
+  deterministic: false

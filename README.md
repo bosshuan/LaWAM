@@ -184,6 +184,57 @@ explicit config never skips directly to joint training.
 
 Use `--resume` only when continuing the same stage and optimizer schedule.
 
+## 4x8 H800 multi-source bring-up
+
+Before allocating H800s, audit all five manifests from a CPU node that can see
+the persistent storage paths. The training config keeps its `/opt/huawei`
+paths; the audit maps that prefix to `/home/ma-user/work` without editing the
+YAML and reads metadata only (no video decoding or model-weight loading):
+
+```bash
+export LAWAM_RUN_ID=storage-manifest-001
+bash /home/ma-user/work/dataset/d_env_wulan/LaWAM/scripts/h800/audit_storage_manifest.sh
+```
+
+The JSON is written to
+`outputs/preflight/storage_manifest/<run-id>.json` even if strict validation
+returns exit code 1. A nonzero exit means one or more dataset schemas require a
+loader adapter or metadata correction; sync that report back for review and do
+not start the 32-GPU pilot yet.
+
+The ModelArts launcher is `scripts/h800/launch_4node.sh`. It consumes the
+platform-provided `VC_WORKER_HOSTS`, `VC_TASK_INDEX`, `MA_NUM_HOSTS`, and
+`MA_NUM_GPUS` variables and uses multi-node `torchrun` without `--standalone`.
+Its server defaults are the actual shared checkout and offline model paths:
+
+```bash
+export LAWAM_REPO_ROOT=/opt/huawei/dataset/d_env_wulan/LaWAM
+export LAWAM_CHECKPOINT=/opt/huawei/dataset/d_env_wulan/vjepa2/checkpoints/vjepa2_1_vitG_384.pt
+export LAWAM_TEXT_MODEL=/opt/huawei/dataset/d_env_wulan/text/t5-large
+export LAWAM_RUN_ID=manifest-001
+export LAWAM_MODE=preflight
+bash /opt/huawei/dataset/d_env_wulan/LaWAM/scripts/h800/launch_4node.sh
+```
+
+Those three path exports are optional unless the server layout changes, since
+the launcher and H800 pilot config contain the same defaults. The corresponding
+persistent-storage prefix is `/home/ma-user/work`; only CPU/read-only jobs
+should use that view. Training jobs must continue to use `/opt/huawei`.
+
+The scheduler should use this as its external job script; do not launch the
+four-node job manually from an interactive terminal. Preflight runs once on
+each node and writes both hardware/data/T5 and strict V-JEPA checkpoint reports
+under `outputs/preflight/h800_multisource/<run-id>/`. Review all four node
+reports before changing `LAWAM_MODE` to `pilot`.
+
+The pilot config declares OXE, AgiBot-World, InternData-A1, RoboMind, and
+RoboTwin as five explicit roots. Its equal source weights are only for
+engineering validation. Sampling first selects a source and then a sample
+within that source, so large sources cannot silently dominate. The 32-GPU
+pilot keeps global batch 64 with gradient accumulation 2 and logs the observed
+fraction from every source. Final scientific weights must be selected after
+the strict manifest reports have been reviewed.
+
 ## Dataset support
 
 The first implementation targets the official InternData-A1 LeRobot v2.1

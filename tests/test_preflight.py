@@ -1,9 +1,11 @@
 import json
+import dataclasses
 from pathlib import Path
 
 import pytest
 
-from latent_wam.preflight import json_default
+from latent_wam.config import ExperimentConfig
+from latent_wam.preflight import audit_data_source, json_default
 
 
 def test_preflight_report_serializes_transformers_sets():
@@ -20,3 +22,32 @@ def test_preflight_report_serializes_transformers_sets():
 def test_preflight_json_default_rejects_unknown_objects():
     with pytest.raises(TypeError, match="not JSON serializable"):
         json_default(object())
+
+
+def test_strict_manifest_reports_unknown_control_fields(tmp_path):
+    meta = tmp_path / "dataset" / "meta"
+    meta.mkdir(parents=True)
+    (meta / "info.json").write_text(
+        json.dumps(
+            {
+                "codebase_version": "v2.1",
+                "features": {
+                    "action": {"dtype": "float32", "shape": [7]},
+                    "observation.state": {"dtype": "float32", "shape": [7]},
+                    "observation.images.main": {"dtype": "video", "shape": [3, 480, 640]},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (meta / "stats.json").write_text("{}\n", encoding="utf-8")
+    (meta / "tasks.jsonl").write_text('{"task_index": 0, "task": "test"}\n', encoding="utf-8")
+    base = ExperimentConfig()
+    config = dataclasses.replace(
+        base,
+        data=dataclasses.replace(base.data, strict_manifest=True),
+    )
+    report, failures = audit_data_source("unknown", tmp_path, config)
+    assert report["unsupported_control_schema_count"] == 1
+    assert "action" in report["sample_unsupported_control_schema"][0]["feature_keys"]
+    assert any("unsupported control manifest" in failure for failure in failures)

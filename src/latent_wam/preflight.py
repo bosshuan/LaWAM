@@ -9,11 +9,15 @@ from pathlib import Path
 import torch
 
 from latent_wam.config import load_config, resolve_output_root
-from latent_wam.data.intern_data_a1 import _feature_size, _select_feature_keys
+from latent_wam.data.intern_data_a1 import (
+    _feature_size,
+    _load_norms,
+    _select_feature_keys,
+)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Validate an 8xA100 LatentWAM server")
+    parser = argparse.ArgumentParser(description="Validate a LatentWAM training node")
     parser.add_argument("--config", required=True)
     parser.add_argument("--checkpoint")
     parser.add_argument("--data-root")
@@ -26,6 +30,8 @@ def parse_args():
         help="Load all local T5 encoder weights on CPU after checking its tokenizer/config",
     )
     parser.add_argument("--output")
+    parser.add_argument("--expected-gpus", type=int, default=8)
+    parser.add_argument("--expected-device-substring", default="A100")
     return parser.parse_args()
 
 
@@ -138,6 +144,207 @@ def audit_local_t5(model_name: str, verify_weights: bool) -> tuple[dict, list[st
     return report, failures
 
 
+def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
+    """Audit one recursive LeRobot v2.1 source without decoding video."""
+    failures: list[str] = []
+    report: dict = {
+        "name": name,
+        "root": str(root),
+        "root_exists": root.is_dir(),
+    }
+    if not root.is_dir():
+        failures.append(f"{name}: missing data root {root}")
+        return report, failures
+
+    info_files = discover_info_files(
+        root, config.data.include_globs, config.data.exclude_contains
+    )
+    report["lerobot_v21_subdatasets"] = len(info_files)
+    report["sample_info_files"] = [str(path) for path in info_files[:10]]
+    if not info_files:
+        failures.append(f"{name}: no candidate meta/info.json files were found")
+
+    normalization_sources = {
+        "stats.json": 0,
+        "episodes_stats.jsonl": 0,
+        "missing": 0,
+    }
+    missing_normalization = []
+    schema_variants: dict[str, dict] = {}
+    unsupported_control_schema = []
+    invalid_info_files = []
+    unsupported_versions = []
+    missing_video_features = []
+    missing_task_metadata = []
+    oversized_control_schemas = []
+    versions: dict[str, int] = {}
+    robot_types: dict[str, int] = {}
+    camera_keys: dict[str, int] = {}
+    fps_values: dict[str, int] = {}
+    licenses: dict[str, int] = {}
+    for info_path in info_files:
+        meta = info_path.parent
+        if (meta / "stats.json").is_file():
+            normalization_sources["stats.json"] += 1
+        elif (meta / "episodes_stats.jsonl").is_file():
+            normalization_sources["episodes_stats.jsonl"] += 1
+        else:
+            normalization_sources["missing"] += 1
+            missing_normalization.append(str(meta))
+        try:
+            with info_path.open("r", encoding="utf-8") as handle:
+                info = json.load(handle)
+            version = str(info.get("codebase_version", "unspecified"))
+            versions[version] = versions.get(version, 0) + 1
+            if version != "unspecified" and not version.startswith("v2"):
+                unsupported_versions.append(
+                    {"path": str(info_path), "codebase_version": version}
+                )
+                continue
+            features = info.get("features", {})
+            fps = str(info.get("fps", "unspecified"))
+            fps_values[fps] = fps_values.get(fps, 0) + 1
+            license_name = str(info.get("license", "unspecified"))
+            licenses[license_name] = licenses.get(license_name, 0) + 1
+            action_keys = _select_feature_keys(features, "actions.")
+            state_keys = _select_feature_keys(features, "states.")
+            videos = sorted(
+                key
+                for key, value in features.items()
+                if isinstance(value, dict) and value.get("dtype") == "video"
+            )
+            for camera in videos:
+                camera_keys[camera] = camera_keys.get(camera, 0) + 1
+            if not videos:
+                missing_video_features.append(str(info_path))
+            if not (meta / "tasks.jsonl").is_file():
+                missing_task_metadata.append(str(meta))
+            if not action_keys or not state_keys:
+                unsupported_control_schema.append(
+                    {
+                        "path": str(info_path),
+                        "feature_keys": sorted(features),
+                        "video_keys": videos,
+                    }
+                )
+                continue
+            action_dim = sum(_feature_size(features[key]) for key in action_keys)
+            state_dim = sum(_feature_size(features[key]) for key in state_keys)
+            if (
+                action_dim > config.action.max_action_dim
+                or state_dim > config.action.max_proprio_dim
+            ):
+                oversized_control_schemas.append(
+                    {
+                        "path": str(info_path),
+                        "action_dim": action_dim,
+                        "state_dim": state_dim,
+                    }
+                )
+            all_control_keys = (*action_keys, *state_keys)
+            norms, normalization_path = _load_norms(
+                info_path.parent.parent,
+                all_control_keys,
+            )
+            missing_norm_keys = [
+                key
+                for key in all_control_keys
+                if not ("gripper" in key and "openness" in key)
+                and key not in norms
+            ]
+            if missing_norm_keys:
+                raise ValueError(
+                    f"{normalization_path} has no mean/std for {missing_norm_keys}"
+                )
+            for key, norm in norms.items():
+                expected_size = _feature_size(features[key])
+                if norm.mean.size != expected_size or norm.std.size != expected_size:
+                    raise ValueError(
+                        f"{normalization_path} statistics for {key} have shape "
+                        f"({norm.mean.size}, {norm.std.size}), expected {expected_size}"
+                    )
+            robot_type = str(info.get("robot_type", info_path.parent.parent.name))
+            robot_types[robot_type] = robot_types.get(robot_type, 0) + 1
+            variant_name = f"{robot_type}:{'|'.join(action_keys)}"
+            variant = schema_variants.setdefault(
+                variant_name,
+                {
+                    "robot_type": robot_type,
+                    "action_keys": list(action_keys),
+                    "state_keys": list(state_keys),
+                    "action_dim": action_dim,
+                    "state_dim": state_dim,
+                    "binary_gripper": any(
+                        "gripper" in key and "openness" in key
+                        for key in action_keys
+                    ),
+                    "subdatasets": 0,
+                },
+            )
+            variant["subdatasets"] += 1
+        except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as error:
+            invalid_info_files.append({"path": str(info_path), "error": str(error)})
+
+    report.update(
+        {
+            "codebase_versions": versions,
+            "normalization_sources": normalization_sources,
+            "sample_missing_normalization": missing_normalization[:10],
+            "control_schema_variants": list(schema_variants.values()),
+            "supported_control_schema_count": sum(
+                variant["subdatasets"] for variant in schema_variants.values()
+            ),
+            "unsupported_control_schema_count": len(unsupported_control_schema),
+            "sample_unsupported_control_schema": unsupported_control_schema[:10],
+            "invalid_info_files": invalid_info_files[:10],
+            "unsupported_version_count": len(unsupported_versions),
+            "sample_unsupported_versions": unsupported_versions[:10],
+            "missing_video_feature_count": len(missing_video_features),
+            "sample_missing_video_features": missing_video_features[:10],
+            "missing_task_metadata_count": len(missing_task_metadata),
+            "sample_missing_task_metadata": missing_task_metadata[:10],
+            "oversized_control_schema_count": len(oversized_control_schemas),
+            "sample_oversized_control_schemas": oversized_control_schemas[:10],
+            "robot_types": robot_types,
+            "camera_keys": camera_keys,
+            "fps_values": fps_values,
+            "licenses": licenses,
+        }
+    )
+    if missing_normalization:
+        failures.append(
+            f"{name}: {len(missing_normalization)} subdatasets have neither "
+            "stats.json nor episodes_stats.jsonl"
+        )
+    if info_files and not schema_variants:
+        failures.append(f"{name}: no supported joint/gripper control schema")
+    if config.data.strict_manifest and unsupported_control_schema:
+        failures.append(
+            f"{name}: {len(unsupported_control_schema)} subdatasets use an "
+            "unsupported control manifest"
+        )
+    if config.data.strict_manifest and unsupported_versions:
+        failures.append(
+            f"{name}: {len(unsupported_versions)} subdatasets are not LeRobot v2.x"
+        )
+    if config.data.strict_manifest and missing_video_features:
+        failures.append(
+            f"{name}: {len(missing_video_features)} subdatasets have no video feature"
+        )
+    if config.data.strict_manifest and missing_task_metadata:
+        failures.append(
+            f"{name}: {len(missing_task_metadata)} subdatasets have no tasks.jsonl"
+        )
+    if oversized_control_schemas:
+        failures.append(
+            f"{name}: {len(oversized_control_schemas)} subdatasets exceed padded "
+            "action/state dimensions"
+        )
+    if invalid_info_files:
+        failures.append(f"{name}: {len(invalid_info_files)} meta/info.json files are invalid")
+    return report, failures
+
+
 def main():
     args = parse_args()
     config = load_config(args.config)
@@ -148,11 +355,17 @@ def main():
     if args.text_model:
         model = dataclasses.replace(model, text_model=args.text_model)
     if args.data_root:
-        data = dataclasses.replace(data, root=args.data_root)
+        data = dataclasses.replace(
+            data,
+            root=args.data_root,
+            roots=(),
+            source_names=(),
+            mixture_weights=(),
+            mixture_epoch_samples=None,
+        )
     config = dataclasses.replace(config, model=model, data=data)
     config.validate()
     checkpoint = Path(config.model.checkpoint).expanduser()
-    data_root = Path(config.data.root).expanduser()
     output_root = resolve_output_root(config)
     failures = []
     report = {
@@ -162,8 +375,6 @@ def main():
         "bf16_supported": torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
         "checkpoint": str(checkpoint),
         "checkpoint_exists": checkpoint.is_file(),
-        "data_root": str(data_root),
-        "data_root_exists": data_root.is_dir(),
         "output_root": str(output_root),
     }
     if not torch.cuda.is_available():
@@ -176,8 +387,13 @@ def main():
     report["torch_version"] = torch.__version__
     if torch_version < (2, 4):
         failures.append(f"PyTorch >= 2.4 is required, found {torch.__version__}")
-    if torch.cuda.device_count() != 8:
-        failures.append(f"Expected exactly 8 visible GPUs, found {torch.cuda.device_count()}")
+    if args.expected_gpus <= 0:
+        raise ValueError("--expected-gpus must be positive")
+    if torch.cuda.device_count() != args.expected_gpus:
+        failures.append(
+            f"Expected exactly {args.expected_gpus} visible GPUs, "
+            f"found {torch.cuda.device_count()}"
+        )
     if torch.cuda.is_available() and not torch.cuda.is_bf16_supported():
         failures.append("Visible GPUs do not report bf16 support")
     if torch.cuda.is_available():
@@ -189,88 +405,61 @@ def main():
             }
             for index in range(torch.cuda.device_count())
         ]
-        non_a100 = [entry["name"] for entry in report["devices"] if "A100" not in entry["name"]]
-        if non_a100:
-            failures.append(f"Non-A100 devices are visible: {non_a100}")
+        unexpected_devices = [
+            entry["name"]
+            for entry in report["devices"]
+            if args.expected_device_substring.lower() not in entry["name"].lower()
+        ]
+        if unexpected_devices:
+            failures.append(
+                f"Devices do not match {args.expected_device_substring!r}: "
+                f"{unexpected_devices}"
+            )
     if not checkpoint.is_file():
         failures.append(f"Missing local checkpoint: {checkpoint}")
     elif not args.skip_checksum:
         report["checkpoint_sha256"] = sha256(checkpoint)
         if args.checkpoint_sha256 and report["checkpoint_sha256"] != args.checkpoint_sha256:
             failures.append("Checkpoint SHA256 does not match the requested digest")
-    if not data_root.is_dir():
-        failures.append(f"Missing InternData-A1 directory: {data_root}")
-    else:
-        info_files = discover_info_files(
-            data_root, config.data.include_globs, config.data.exclude_contains
+    source_roots = config.data.roots or (config.data.root,)
+    source_names = config.data.source_names or tuple(
+        Path(root).expanduser().name for root in source_roots
+    )
+    source_weights = config.data.mixture_weights or (1.0,) * len(source_roots)
+    weight_sum = sum(source_weights)
+    report["data_mixture"] = {
+        "strict_manifest": config.data.strict_manifest,
+        "mixture_epoch_samples": config.data.mixture_epoch_samples,
+        "weights": {
+            name: weight / weight_sum
+            for name, weight in zip(source_names, source_weights)
+        },
+    }
+    data_reports = []
+    for name, root_value in zip(source_names, source_roots):
+        source_report, source_failures = audit_data_source(
+            name,
+            Path(root_value).expanduser(),
+            config,
         )
-        report["lerobot_v21_subdatasets"] = len(info_files)
-        report["sample_info_files"] = [str(path) for path in info_files[:10]]
-        if not info_files:
-            failures.append("No candidate meta/info.json files were found")
-        normalization_sources = {
-            "stats.json": 0,
-            "episodes_stats.jsonl": 0,
-            "missing": 0,
-        }
-        missing_normalization = []
-        for info_path in info_files:
-            meta = info_path.parent
-            if (meta / "stats.json").is_file():
-                normalization_sources["stats.json"] += 1
-            elif (meta / "episodes_stats.jsonl").is_file():
-                normalization_sources["episodes_stats.jsonl"] += 1
-            else:
-                normalization_sources["missing"] += 1
-                missing_normalization.append(str(meta))
-        report["normalization_sources"] = normalization_sources
-        report["sample_missing_normalization"] = missing_normalization[:10]
-        if missing_normalization:
-            failures.append(
-                f"{len(missing_normalization)} subdatasets have neither stats.json "
-                "nor episodes_stats.jsonl"
-            )
-        schema_variants: dict[str, dict] = {}
-        unsupported_control_schema = []
-        invalid_info_files = []
-        for info_path in info_files:
-            try:
-                with info_path.open("r", encoding="utf-8") as handle:
-                    info = json.load(handle)
-                features = info.get("features", {})
-                action_keys = _select_feature_keys(features, "actions.")
-                state_keys = _select_feature_keys(features, "states.")
-                if not action_keys or not state_keys:
-                    unsupported_control_schema.append(str(info_path))
-                    continue
-                robot_type = str(info.get("robot_type", info_path.parent.parent.name))
-                variant_name = f"{robot_type}:{'|'.join(action_keys)}"
-                variant = schema_variants.setdefault(
-                    variant_name,
-                    {
-                        "robot_type": robot_type,
-                        "action_keys": list(action_keys),
-                        "state_keys": list(state_keys),
-                        "action_dim": sum(_feature_size(features[key]) for key in action_keys),
-                        "state_dim": sum(_feature_size(features[key]) for key in state_keys),
-                        "binary_gripper": any(
-                            "gripper" in key and "openness" in key
-                            for key in action_keys
-                        ),
-                        "subdatasets": 0,
-                    },
-                )
-                variant["subdatasets"] += 1
-            except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as error:
-                invalid_info_files.append({"path": str(info_path), "error": str(error)})
-        report["control_schema_variants"] = list(schema_variants.values())
-        report["unsupported_control_schema_count"] = len(unsupported_control_schema)
-        report["sample_unsupported_control_schema"] = unsupported_control_schema[:10]
-        report["invalid_info_files"] = invalid_info_files[:10]
-        if info_files and not schema_variants:
-            failures.append("No subdataset exposes a supported joint/gripper control schema")
-        if invalid_info_files:
-            failures.append(f"{len(invalid_info_files)} meta/info.json files are invalid")
+        data_reports.append(source_report)
+        failures.extend(source_failures)
+    report["data_sources"] = data_reports
+    if len(data_reports) == 1:
+        source_report = data_reports[0]
+        report["data_root"] = source_report["root"]
+        report["data_root_exists"] = source_report["root_exists"]
+        for key in (
+            "lerobot_v21_subdatasets",
+            "sample_info_files",
+            "normalization_sources",
+            "sample_missing_normalization",
+            "control_schema_variants",
+            "unsupported_control_schema_count",
+            "sample_unsupported_control_schema",
+            "invalid_info_files",
+        ):
+            report[key] = source_report.get(key)
     if config.model.text_backend == "t5":
         text_report, text_failures = audit_local_t5(
             config.model.text_model,

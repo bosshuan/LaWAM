@@ -239,7 +239,7 @@ def _table_rows(table, indices: list[int], keys: tuple[str, ...]) -> list[dict[s
 
 
 class InternDataA1Dataset(Dataset[TrainingBatch]):
-    """Direct reader for InternData-A1 LeRobot v2.1 subdatasets."""
+    """Direct reader for the validated joint-space LeRobot v2.1 schema."""
 
     def __init__(self, config: ExperimentConfig, split: str = "train"):
         if config.data.backend != "lerobot_v21":
@@ -250,15 +250,15 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
         self.split = split
         self.root = Path(config.data.root).expanduser()
         if not self.root.is_dir():
-            raise FileNotFoundError(f"InternData-A1 root does not exist: {self.root}")
+            raise FileNotFoundError(f"LeRobot v2.1 root does not exist: {self.root}")
         self.subdatasets: list[SubdatasetRecord] = []
         self.episodes: list[EpisodeRecord] = []
         self._cumulative: list[int] = []
         self._discover()
         if not self.episodes:
             raise RuntimeError(
-                f"No usable LeRobot v2.1 episodes found under {self.root}. "
-                "Run latent-wam-preflight to inspect the downloaded subset."
+                f"No usable joint-space LeRobot v2.1 episodes found under {self.root}. "
+                "Run latent-wam-preflight to inspect its feature manifest."
             )
         self._raw_samples = self._cumulative[-1]
         self._fixed_sample_index = config.data.fixed_sample_index
@@ -287,12 +287,21 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
             info = _read_json(info_path)
             version = str(info.get("codebase_version", ""))
             if version and not version.startswith("v2"):
+                if self.config.data.strict_manifest:
+                    raise ValueError(
+                        f"Unsupported LeRobot version {version!r} in {info_path}"
+                    )
                 continue
             root = info_path.parent.parent
             features = info.get("features", {})
             action_keys = _select_feature_keys(features, "actions.")
             state_keys = _select_feature_keys(features, "states.")
             if not action_keys or not state_keys:
+                if self.config.data.strict_manifest:
+                    raise ValueError(
+                        f"Unsupported control manifest in {info_path}: "
+                        f"feature keys are {sorted(features)}"
+                    )
                 continue
             camera = _select_camera(features, self.config.video.camera_key)
             all_keys = (*action_keys, *state_keys)

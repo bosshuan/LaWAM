@@ -22,7 +22,12 @@ from latent_wam.checkpoint import (
     save_training_checkpoint,
 )
 from latent_wam.config import ExperimentConfig, load_config, resolve_output_root
-from latent_wam.data import InternDataA1Dataset, collate_training_batch
+from latent_wam.data import (
+    DistributedMixtureSampler,
+    LeRobotMixtureDataset,
+    build_training_dataset,
+    collate_training_batch,
+)
 from latent_wam.distributed import (
     barrier,
     broadcast_object,
@@ -58,7 +63,14 @@ def apply_overrides(config: ExperimentConfig, args) -> ExperimentConfig:
     if args.text_model:
         model = dataclasses.replace(model, text_model=args.text_model)
     if args.data_root:
-        data = dataclasses.replace(data, root=args.data_root)
+        data = dataclasses.replace(
+            data,
+            root=args.data_root,
+            roots=(),
+            source_names=(),
+            mixture_weights=(),
+            mixture_epoch_samples=None,
+        )
     if args.fixed_sample_index is not None:
         data = dataclasses.replace(data, fixed_sample_index=args.fixed_sample_index)
     if args.max_steps is not None:
@@ -209,12 +221,25 @@ def main():
     seed_everything(config.train.seed + rank)
     output_dir = create_output_dir(config, args.output_dir, rank)
 
-    dataset = InternDataA1Dataset(config, split="train")
-    sampler = (
-        DistributedSampler(dataset, num_replicas=world_size, rank=rank, shuffle=True, seed=config.train.seed)
-        if world_size > 1
-        else RandomSampler(dataset)
-    )
+    dataset = build_training_dataset(config, split="train")
+    if isinstance(dataset, LeRobotMixtureDataset):
+        sampler = DistributedMixtureSampler(
+            dataset,
+            num_replicas=world_size,
+            rank=rank,
+            seed=config.train.seed,
+            epoch_samples=config.data.mixture_epoch_samples,
+        )
+    elif world_size > 1:
+        sampler = DistributedSampler(
+            dataset,
+            num_replicas=world_size,
+            rank=rank,
+            shuffle=True,
+            seed=config.train.seed,
+        )
+    else:
+        sampler = RandomSampler(dataset)
     loader = DataLoader(
         dataset,
         batch_size=config.train.batch_size_per_gpu,
@@ -266,6 +291,15 @@ def main():
                 "stage": config.train.stage,
                 "requested_stop_after": end_step,
                 "data": dataset.audit_summary(),
+                "sampler": (
+                    sampler.audit_summary()
+                    if isinstance(sampler, DistributedMixtureSampler)
+                    else {
+                        "type": type(sampler).__name__,
+                        "seed": config.train.seed,
+                        "samples_per_rank": len(sampler),
+                    }
+                ),
                 "global_batch_size": (
                     config.train.batch_size_per_gpu
                     * config.train.grad_accum_steps
@@ -315,17 +349,26 @@ def main():
             data_time = 0.0
             torch.cuda.reset_peak_memory_stats(device)
             metrics_accum: dict[str, float] = {}
+            source_counts = (
+                {name: 0 for name in dataset.source_names}
+                if isinstance(dataset, LeRobotMixtureDataset)
+                else {}
+            )
             for micro_step in range(config.train.grad_accum_steps):
                 data_started = time.perf_counter()
                 try:
                     batch = next(data_iterator)
                 except StopIteration:
                     epoch += 1
-                    if isinstance(sampler, DistributedSampler):
+                    if hasattr(sampler, "set_epoch"):
                         sampler.set_epoch(epoch)
                     data_iterator = iter(loader)
                     batch = next(data_iterator)
                 data_time += time.perf_counter() - data_started
+                for metadata in batch.targets.metadata:
+                    source_name = metadata.get("dataset_source")
+                    if source_name is not None:
+                        source_counts[source_name] += 1
                 batch = batch.to(device)
                 should_sync = micro_step == config.train.grad_accum_steps - 1
                 sync_context = nullcontext() if should_sync or world_size == 1 else student.no_sync()
@@ -351,6 +394,13 @@ def main():
                     scaled_loss.backward()
                 for key, value in losses.detached().items():
                     metrics_accum[key] = metrics_accum.get(key, 0.0) + value / config.train.grad_accum_steps
+            sampled_per_rank = (
+                config.train.batch_size_per_gpu * config.train.grad_accum_steps
+            )
+            for source_name, count in source_counts.items():
+                metrics_accum[f"source_fraction_{source_name}"] = (
+                    count / sampled_per_rank
+                )
             gradient_norm = torch.nn.utils.clip_grad_norm_(
                 [parameter for group in optimizer.param_groups for parameter in group["params"]],
                 config.train.gradient_clip,

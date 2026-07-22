@@ -81,3 +81,12 @@ def test_stage1_full_sim_pilot_has_no_dataset_caps():
     assert config.data.max_episodes_per_subdataset is None
     assert config.data.root.endswith("/InternData-A1/sim")
     assert config.model.text_backend == "t5"
+
+
+def test_data_root_override_shape_can_remain_single_source():
+    base = ExperimentConfig()
+    config = dataclasses.replace(
+        base,
+        data=dataclasses.replace(base.data, root="/single", roots=()),
+    )
+    config.validate()

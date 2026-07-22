@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,11 @@ class ModelConfig:
 @dataclass(frozen=True)
 class DataConfig:
     root: str = "/mnt/sfs_turbo/rl/InternData-A1/sim"
+    roots: tuple[str, ...] = ()
+    source_names: tuple[str, ...] = ()
+    mixture_weights: tuple[float, ...] = ()
+    mixture_epoch_samples: int | None = None
+    strict_manifest: bool = False
     backend: str = "lerobot_v21"
     include_globs: tuple[str, ...] = ("**/meta/info.json",)
     exclude_contains: tuple[str, ...] = ("real_lerobotv30", "sim_updated_lerobotv30")
@@ -171,6 +177,34 @@ class ExperimentConfig:
             raise ValueError("num_workers cannot be negative")
         if self.data.sample_stride <= 0:
             raise ValueError("sample_stride must be positive")
+        if self.data.roots:
+            source_count = len(self.data.roots)
+            if any(not root for root in self.data.roots):
+                raise ValueError("data roots cannot be empty")
+            if len(set(self.data.roots)) != source_count:
+                raise ValueError("data roots must be unique")
+            if self.data.source_names and len(self.data.source_names) != source_count:
+                raise ValueError("source_names must have one entry per data root")
+            if self.data.mixture_weights and len(self.data.mixture_weights) != source_count:
+                raise ValueError("mixture_weights must have one entry per data root")
+            if len(set(self.data.source_names)) != len(self.data.source_names):
+                raise ValueError("source_names must be unique")
+            if any(
+                not math.isfinite(weight) or weight <= 0
+                for weight in self.data.mixture_weights
+            ):
+                raise ValueError("mixture_weights must be finite and positive")
+            if self.data.fixed_sample_index is not None:
+                raise ValueError("fixed_sample_index is supported only with a single data root")
+        elif self.data.source_names or self.data.mixture_weights:
+            raise ValueError("source_names and mixture_weights require data.roots")
+        elif self.data.mixture_epoch_samples is not None:
+            raise ValueError("mixture_epoch_samples requires data.roots")
+        if (
+            self.data.mixture_epoch_samples is not None
+            and self.data.mixture_epoch_samples <= 0
+        ):
+            raise ValueError("mixture_epoch_samples must be positive")
         if self.data.fixed_sample_index is not None and self.data.fixed_sample_index < 0:
             raise ValueError("fixed_sample_index cannot be negative")
         if not 0.0 < self.data.train_fraction < 1.0:
