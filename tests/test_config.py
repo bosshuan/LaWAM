@@ -65,3 +65,19 @@ def test_t5_smoke_uses_real_offline_t5_large():
     assert config.model.text_local_files_only
     assert config.model.text_model.endswith("/t5-large")
     assert config.train.max_steps == 20
+
+
+def test_stage1_full_sim_pilot_has_no_dataset_caps():
+    config = load_config(
+        PROJECT_ROOT
+        / "configs"
+        / "debug"
+        / "interndata_a1_stage1_full_sim_pilot.yaml"
+    )
+    assert config.train.stage == "future"
+    assert config.train.max_steps == 100
+    assert config.train.grad_accum_steps == 8
+    assert config.data.max_subdatasets is None
+    assert config.data.max_episodes_per_subdataset is None
+    assert config.data.root.endswith("/InternData-A1/sim")
+    assert config.model.text_backend == "t5"

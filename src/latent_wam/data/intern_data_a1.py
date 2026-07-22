@@ -461,6 +461,13 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
             "raw_samples": self._raw_samples,
             "effective_samples": len(self),
             "fixed_sample": fixed_sample,
+            "subdataset_count": len(selected_indices),
+            "episode_count": (
+                1 if self._fixed_sample_index is not None else len(self.episodes)
+            ),
+            "subdatasets": [
+                self.subdatasets[index].name for index in sorted(selected_indices)
+            ],
             "schema_variants": list(schema_variants.values()),
         }
 

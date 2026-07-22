@@ -118,10 +118,24 @@ and uses one explicit `outputs/interndata_a1_8gpu_t5_smoke/<run-id>/` directory;
 the startup artifact records the actual text encoder class, width, parameter
 count, and confirms that it is frozen.
 
+After the real-T5 smoke test passes, run a 100-step Stage 1 engineering pilot
+over every usable episode in all InternData-A1 `sim` subdatasets:
+
+```bash
+bash scripts/debug/run_stage1_full_sim_pilot.sh
+```
+
+Unlike the smoke configs, this pilot has no `max_subdatasets` or
+`max_episodes_per_subdataset` limit. It uses the scientific microbatch and
+gradient accumulation settings (global batch 64 on 8 GPUs), but writes to the
+separate `outputs/interndata_a1_stage1_full_sim_pilot/<run-id>/` namespace and
+stops after 100 optimizer steps. It does not replace the later 20k-step Stage 1
+run on the final training mixture.
+
 Pass `--text-model /absolute/local/path/to/t5-large` to both T5 commands when
 the server path differs from the checked-in default.
 
-The smoke config deliberately uses the local hash text encoder so the training
+The basic smoke config deliberately uses the local hash text encoder so the training
 path can be validated without downloading T5. Scientific training uses frozen
 T5-large and `local_files_only: true`; either put `google-t5/t5-large` in the
 server Hugging Face cache or pass its local directory:
