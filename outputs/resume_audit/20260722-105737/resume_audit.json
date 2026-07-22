@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "reference": "/mnt/sfs_turbo/fyy/LaWAM/outputs/resume_audit/20260722-105737/uninterrupted/checkpoints/final.pt",
+  "candidate": "/mnt/sfs_turbo/fyy/LaWAM/outputs/resume_audit/20260722-105737/resumed/checkpoints/final.pt",
+  "reference_step": 6,
+  "candidate_step": 6,
+  "atol": 0.0,
+  "max_abs_difference": 0.0,
+  "missing_keys": [],
+  "unexpected_keys": [],
+  "mismatched_count": 0,
+  "sample_mismatches": []
+}
