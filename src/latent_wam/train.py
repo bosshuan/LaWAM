@@ -272,6 +272,24 @@ def main():
                     * world_size
                 ),
                 "runtime": runtime_audit_summary(config.train.deterministic),
+                "text_encoder": {
+                    "backend": config.model.text_backend,
+                    "model": config.model.text_model,
+                    "wrapper_class": type(model.text_encoder).__name__,
+                    "encoder_class": type(
+                        getattr(model.text_encoder, "encoder", model.text_encoder)
+                    ).__name__,
+                    "output_dim": model.text_encoder.output_dim,
+                    "parameters": sum(
+                        parameter.numel()
+                        for parameter in model.text_encoder.parameters()
+                    ),
+                    "trainable_parameters": sum(
+                        parameter.numel()
+                        for parameter in model.text_encoder.parameters()
+                        if parameter.requires_grad
+                    ),
+                },
                 "trainable_student_parameters": sum(
                     parameter.numel()
                     for parameter in model.student.parameters()

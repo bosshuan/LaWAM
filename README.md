@@ -111,6 +111,13 @@ bash scripts/debug/preflight_t5_a100.sh --skip-checksum
 bash scripts/debug/run_8gpu_t5_smoke.sh
 ```
 
+The T5 preflight loads the local tokenizer, validates the T5-large architecture
+(`d_model=1024`, 24 encoder layers), and loads every T5 encoder weight on CPU.
+Its JSON report is written under `outputs/preflight/`. The smoke launcher prints
+and uses one explicit `outputs/interndata_a1_8gpu_t5_smoke/<run-id>/` directory;
+the startup artifact records the actual text encoder class, width, parameter
+count, and confirms that it is frozen.
+
 Pass `--text-model /absolute/local/path/to/t5-large` to both T5 commands when
 the server path differs from the checked-in default.
 

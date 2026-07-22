@@ -55,3 +55,13 @@ def test_resume_audit_config_uses_controlled_deterministic_runtime():
     assert config.train.num_workers == 0
     assert config.train.save_every == 3
     assert config.data.fixed_sample_index == 0
+
+
+def test_t5_smoke_uses_real_offline_t5_large():
+    config = load_config(
+        PROJECT_ROOT / "configs" / "debug" / "interndata_a1_8gpu_t5_smoke.yaml"
+    )
+    assert config.model.text_backend == "t5"
+    assert config.model.text_local_files_only
+    assert config.model.text_model.endswith("/t5-large")
+    assert config.train.max_steps == 20

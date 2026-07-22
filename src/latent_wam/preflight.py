@@ -20,6 +20,12 @@ def parse_args():
     parser.add_argument("--text-model")
     parser.add_argument("--checkpoint-sha256")
     parser.add_argument("--skip-checksum", action="store_true")
+    parser.add_argument(
+        "--verify-text-model-load",
+        action="store_true",
+        help="Load all local T5 encoder weights on CPU after checking its tokenizer/config",
+    )
+    parser.add_argument("--output")
     return parser.parse_args()
 
 
@@ -40,6 +46,87 @@ def discover_info_files(root: Path, patterns, excluded) -> list[Path]:
         for path in sorted(paths)
         if not any(token in str(path) for token in excluded)
     ]
+
+
+def audit_local_t5(model_name: str, verify_weights: bool) -> tuple[dict, list[str]]:
+    """Validate the exact offline T5 path used by training."""
+    report = {
+        "text_model": model_name,
+        "local_t5_available": False,
+        "t5_weights_verified": False,
+    }
+    failures: list[str] = []
+    try:
+        from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
+
+        text_config = AutoConfig.from_pretrained(model_name, local_files_only=True)
+        report["t5_architecture"] = {
+            "model_type": text_config.model_type,
+            "d_model": getattr(text_config, "d_model", None),
+            "d_ff": getattr(text_config, "d_ff", None),
+            "num_layers": getattr(text_config, "num_layers", None),
+            "num_heads": getattr(text_config, "num_heads", None),
+            "vocab_size": getattr(text_config, "vocab_size", None),
+        }
+        if (
+            text_config.model_type != "t5"
+            or getattr(text_config, "d_model", None) != 1024
+            or getattr(text_config, "num_layers", None) != 24
+        ):
+            failures.append(
+                "The local text checkpoint is not T5-large "
+                "(expected model_type=t5, d_model=1024, num_layers=24)"
+            )
+
+        tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=True)
+        encoded = tokenizer(
+            "move the robot arm",
+            return_tensors="pt",
+            truncation=True,
+            max_length=16,
+        )
+        report["t5_tokenizer"] = {
+            "class": type(tokenizer).__name__,
+            "probe_tokens": int(encoded["input_ids"].shape[-1]),
+        }
+        report["local_t5_available"] = True
+
+        if verify_weights:
+            text_encoder, loading_info = T5EncoderModel.from_pretrained(
+                model_name,
+                local_files_only=True,
+                output_loading_info=True,
+            )
+            missing_keys = loading_info.get("missing_keys", [])
+            mismatched_keys = loading_info.get("mismatched_keys", [])
+            error_messages = loading_info.get("error_msgs", [])
+            report["t5_encoder_class"] = type(text_encoder).__name__
+            report["t5_encoder_parameters"] = sum(
+                parameter.numel() for parameter in text_encoder.parameters()
+            )
+            report["t5_weight_loading"] = {
+                "missing_keys": missing_keys,
+                "mismatched_keys": mismatched_keys,
+                "error_messages": error_messages,
+                "unexpected_key_count": len(
+                    loading_info.get("unexpected_keys", [])
+                ),
+            }
+            report["t5_weights_verified"] = not (
+                missing_keys or mismatched_keys or error_messages
+            )
+            if not report["t5_weights_verified"]:
+                failures.append(
+                    "The local T5 encoder has missing, mismatched, or unreadable weights"
+                )
+            del text_encoder
+    except Exception as error:
+        report["t5_load_error"] = f"{type(error).__name__}: {error}"
+        failures.append(
+            "Failed to load the offline T5 tokenizer/config"
+            + (" and encoder weights" if verify_weights else "")
+        )
+    return report, failures
 
 
 def main():
@@ -176,28 +263,12 @@ def main():
         if invalid_info_files:
             failures.append(f"{len(invalid_info_files)} meta/info.json files are invalid")
     if config.model.text_backend == "t5":
-        text_path = Path(config.model.text_model).expanduser()
-        text_available = text_path.is_dir()
-        if not text_available:
-            try:
-                from transformers.utils.hub import cached_file
-
-                text_available = cached_file(
-                    config.model.text_model,
-                    "config.json",
-                    local_files_only=True,
-                    _raise_exceptions_for_gated_repo=False,
-                    _raise_exceptions_for_missing_entries=False,
-                    _raise_exceptions_for_connection_errors=False,
-                ) is not None
-            except Exception:
-                text_available = False
-        report["local_t5_available"] = text_available
-        if not text_available:
-            failures.append(
-                "Frozen T5 is not available locally; pass --text-model to training "
-                "or change model.text_model to an existing server directory"
-            )
+        text_report, text_failures = audit_local_t5(
+            config.model.text_model,
+            verify_weights=args.verify_text_model_load,
+        )
+        report.update(text_report)
+        failures.extend(text_failures)
     output_root.mkdir(parents=True, exist_ok=True)
     probe = output_root / ".write-probe"
     try:
@@ -206,7 +277,14 @@ def main():
     except OSError as error:
         failures.append(f"Output directory is not writable: {error}")
     report["failures"] = failures
-    print(json.dumps(report, indent=2), flush=True)
+    output = Path(args.output).expanduser().resolve() if args.output else None
+    if output is not None:
+        report["report_path"] = str(output)
+    serialized = json.dumps(report, indent=2)
+    print(serialized, flush=True)
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(serialized + "\n", encoding="utf-8")
     if failures:
         raise SystemExit(1)
 
