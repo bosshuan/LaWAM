@@ -1,0 +1,225 @@
+{
+  "config": {
+    "video": {
+      "resolution": 384,
+      "context_frames": 8,
+      "future_frames": 4,
+      "video_fps": 4.0,
+      "patch_size": 16,
+      "tubelet_size": 2,
+      "camera_key": "auto"
+    },
+    "action": {
+      "chunk_size": 10,
+      "action_hz": 10.0,
+      "proprio_history": 4,
+      "past_action_history": 2,
+      "max_action_dim": 32,
+      "max_proprio_dim": 64,
+      "schema_buckets": 1024
+    },
+    "model": {
+      "checkpoint": "/mnt/sfs_turbo/fyy/checkpoints/vjepa2/vjepa2_1_vitG_384.pt",
+      "encoder_embed_dim": 1664,
+      "encoder_depth": 48,
+      "predictor_embed_dim": 384,
+      "predictor_depth": 24,
+      "predictor_heads": 12,
+      "predictor_mask_tokens": 8,
+      "joint_start_block": 12,
+      "reciprocal_start_block": 18,
+      "joint_attention": "time_aligned",
+      "conditioning_blocks": [
+        4,
+        11,
+        17,
+        23
+      ],
+      "activation_checkpointing": true,
+      "text_backend": "t5",
+      "text_model": "/mnt/sfs_turbo/fyy/checkpoints/text/t5-large",
+      "text_local_files_only": true,
+      "max_text_tokens": 64,
+      "hash_vocab_size": 32768
+    },
+    "data": {
+      "root": "/mnt/sfs_turbo/rl/InternData-A1/sim",
+      "backend": "lerobot_v21",
+      "include_globs": [
+        "**/meta/info.json"
+      ],
+      "exclude_contains": [
+        "real_lerobotv30",
+        "sim_updated_lerobotv30"
+      ],
+      "sample_stride": 30,
+      "max_subdatasets": 1,
+      "max_episodes_per_subdataset": 8,
+      "fixed_sample_index": null,
+      "decode_threads": 1,
+      "train_fraction": 0.995,
+      "seed": 239
+    },
+    "loss": {
+      "future_weight": 1.0,
+      "action_weight": 1.0,
+      "smoothness_weight": 0.01,
+      "gripper_weight": 1.0,
+      "huber_delta": 1.0,
+      "normalize_future_levels": true
+    },
+    "train": {
+      "run_name": "interndata_a1_8gpu_t5_smoke",
+      "output_root": "outputs",
+      "stage": "joint",
+      "max_steps": 20,
+      "batch_size_per_gpu": 1,
+      "grad_accum_steps": 1,
+      "num_workers": 2,
+      "predictor_lr": 1e-05,
+      "new_module_lr": 0.0003,
+      "lr_schedule": "cosine",
+      "min_lr_ratio": 0.01,
+      "weight_decay": 0.05,
+      "warmup_fraction": 0.05,
+      "gradient_clip": 1.0,
+      "log_every": 1,
+      "save_every": 10,
+      "seed": 239,
+      "bf16": true,
+      "deterministic": false,
+      "compile": false,
+      "resume": null,
+      "init_student": null,
+      "find_unused_parameters": false
+    }
+  },
+  "cuda_available": true,
+  "cuda_device_count": 8,
+  "bf16_supported": true,
+  "checkpoint": "/mnt/sfs_turbo/fyy/checkpoints/vjepa2/vjepa2_1_vitG_384.pt",
+  "checkpoint_exists": true,
+  "data_root": "/mnt/sfs_turbo/rl/InternData-A1/sim",
+  "data_root_exists": true,
+  "output_root": "/mnt/sfs_turbo/fyy/LaWAM/outputs",
+  "torch_version": "2.5.1+cu121",
+  "devices": [
+    {
+      "index": 0,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memory_gib": 79.33
+    },
+    {
+      "index": 1,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memory_gib": 79.33
+    },
+    {
+      "index": 2,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memory_gib": 79.33
+    },
+    {
+      "index": 3,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memory_gib": 79.33
+    },
+    {
+      "index": 4,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memory_gib": 79.33
+    },
+    {
+      "index": 5,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memory_gib": 79.33
+    },
+    {
+      "index": 6,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memory_gib": 79.33
+    },
+    {
+      "index": 7,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memory_gib": 79.33
+    }
+  ],
+  "lerobot_v21_subdatasets": 3,
+  "sample_info_files": [
+    "/mnt/sfs_turbo/rl/InternData-A1/sim/articulation_tasks/lift2/heat_the_food_in_the_microwave/meta/info.json",
+    "/mnt/sfs_turbo/rl/InternData-A1/sim/articulation_tasks/split_aloha/rotate_the_left_hearth_right_arm_counterclockwise/meta/info.json",
+    "/mnt/sfs_turbo/rl/InternData-A1/sim/long_horizon_tasks/franka/put_the_trash_in_trashcan_part2/meta/info.json"
+  ],
+  "normalization_sources": {
+    "stats.json": 0,
+    "episodes_stats.jsonl": 3,
+    "missing": 0
+  },
+  "sample_missing_normalization": [],
+  "control_schema_variants": [
+    {
+      "robot_type": "piper",
+      "action_keys": [
+        "actions.left_gripper.position",
+        "actions.left_joint.position",
+        "actions.right_gripper.position",
+        "actions.right_joint.position"
+      ],
+      "state_keys": [
+        "states.left_gripper.position",
+        "states.left_joint.position",
+        "states.right_gripper.position",
+        "states.right_joint.position"
+      ],
+      "action_dim": 14,
+      "state_dim": 14,
+      "binary_gripper": false,
+      "subdatasets": 2
+    },
+    {
+      "robot_type": "piper",
+      "action_keys": [
+        "actions.gripper.openness",
+        "actions.gripper.position",
+        "actions.joint.position"
+      ],
+      "state_keys": [
+        "states.gripper.position",
+        "states.joint.position"
+      ],
+      "action_dim": 9,
+      "state_dim": 8,
+      "binary_gripper": true,
+      "subdatasets": 1
+    }
+  ],
+  "unsupported_control_schema_count": 0,
+  "sample_unsupported_control_schema": [],
+  "invalid_info_files": [],
+  "text_model": "/mnt/sfs_turbo/fyy/checkpoints/text/t5-large",
+  "local_t5_available": true,
+  "t5_weights_verified": true,
+  "t5_architecture": {
+    "model_type": "t5",
+    "d_model": 1024,
+    "d_ff": 4096,
+    "num_layers": 24,
+    "num_heads": 16,
+    "vocab_size": 32128
+  },
+  "t5_tokenizer": {
+    "class": "T5Tokenizer",
+    "probe_tokens": 5
+  },
+  "t5_encoder_class": "T5EncoderModel",
+  "t5_encoder_parameters": 334939648,
+  "t5_weight_loading": {
+    "missing_keys": [],
+    "mismatched_keys": [],
+    "error_messages": [],
+    "unexpected_key_count": 0
+  },
+  "failures": [],
+  "report_path": "/mnt/sfs_turbo/fyy/LaWAM/outputs/preflight/t5_a100_20260722-112053.json"
+}
