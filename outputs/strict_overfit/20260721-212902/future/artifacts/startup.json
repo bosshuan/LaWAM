@@ -1,0 +1,51 @@
+{
+  "checkpoint": "/mnt/sfs_turbo/fyy/checkpoints/vjepa2/vjepa2_1_vitG_384.pt",
+  "encoder_key": "target_encoder",
+  "encoder_parameters": 1845216768,
+  "predictor_parameters": 59433472,
+  "encoder_layers": 48,
+  "predictor_layers": 24,
+  "encoder_embed_dim": 1664,
+  "predictor_embed_dim": 384,
+  "world_size": 1,
+  "samples": 1,
+  "output_dir": "/mnt/sfs_turbo/fyy/LaWAM/outputs/strict_overfit/20260721-212902/future",
+  "stage": "future",
+  "requested_stop_after": 300,
+  "data": {
+    "raw_samples": 12,
+    "effective_samples": 1,
+    "fixed_sample": {
+      "raw_index": 0,
+      "episode": 0,
+      "anchor": 53
+    },
+    "schema_variants": [
+      {
+        "schema": "piper:actions.left_gripper.position|actions.left_joint.position|actions.right_gripper.position|actions.right_joint.position",
+        "robot_type": "piper",
+        "action_keys": [
+          "actions.left_gripper.position",
+          "actions.left_joint.position",
+          "actions.right_gripper.position",
+          "actions.right_joint.position"
+        ],
+        "state_keys": [
+          "states.left_gripper.position",
+          "states.left_joint.position",
+          "states.right_gripper.position",
+          "states.right_joint.position"
+        ],
+        "action_dim": 14,
+        "state_dim": 14,
+        "normalization_source": "episodes_stats.jsonl"
+      }
+    ]
+  },
+  "global_batch_size": 1,
+  "trainable_student_parameters": 60214020,
+  "optimizer_groups": {
+    "predictor": 56867456,
+    "new": 3346564
+  }
+}

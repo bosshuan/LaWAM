@@ -1,0 +1,93 @@
+{
+  "reference": "/mnt/sfs_turbo/fyy/LaWAM/outputs/resume_audit/20260721-213924/uninterrupted/checkpoints/final.pt",
+  "candidate": "/mnt/sfs_turbo/fyy/LaWAM/outputs/resume_audit/20260721-213924/resumed/checkpoints/final.pt",
+  "reference_step": 6,
+  "candidate_step": 6,
+  "atol": 0.0,
+  "max_abs_difference": 0.0034819021821022034,
+  "missing_keys": [],
+  "unexpected_keys": [],
+  "mismatched_count": 356,
+  "sample_mismatches": [
+    {
+      "key": "action_condition_projection.bias",
+      "max_abs_difference": 0.000718207098543644
+    },
+    {
+      "key": "action_condition_projection.weight",
+      "max_abs_difference": 0.0016297027468681335
+    },
+    {
+      "key": "action_head.bias",
+      "max_abs_difference": 3.642775118350983e-05
+    },
+    {
+      "key": "action_head.weight",
+      "max_abs_difference": 0.0007171854376792908
+    },
+    {
+      "key": "action_norm.bias",
+      "max_abs_difference": 0.0001603944692760706
+    },
+    {
+      "key": "action_norm.weight",
+      "max_abs_difference": 0.000883638858795166
+    },
+    {
+      "key": "action_queries",
+      "max_abs_difference": 0.002940570004284382
+    },
+    {
+      "key": "action_time_embedding.0.bias",
+      "max_abs_difference": 0.0007897987961769104
+    },
+    {
+      "key": "action_time_embedding.0.weight",
+      "max_abs_difference": 0.0007330775260925293
+    },
+    {
+      "key": "action_time_embedding.2.bias",
+      "max_abs_difference": 0.000718207098543644
+    },
+    {
+      "key": "action_time_embedding.2.weight",
+      "max_abs_difference": 0.0034819021821022034
+    },
+    {
+      "key": "conditioning.action_projection.bias",
+      "max_abs_difference": 0.0005012955516576767
+    },
+    {
+      "key": "conditioning.action_projection.weight",
+      "max_abs_difference": 0.0005032718181610107
+    },
+    {
+      "key": "conditioning.embodiment_embedding.weight",
+      "max_abs_difference": 0.0004844069480895996
+    },
+    {
+      "key": "conditioning.norm.bias",
+      "max_abs_difference": 0.00042716600000858307
+    },
+    {
+      "key": "conditioning.norm.weight",
+      "max_abs_difference": 0.0007709264755249023
+    },
+    {
+      "key": "conditioning.proprio_projection.bias",
+      "max_abs_difference": 0.000902026891708374
+    },
+    {
+      "key": "conditioning.proprio_projection.weight",
+      "max_abs_difference": 0.0009048869833350182
+    },
+    {
+      "key": "conditioning.schema_embedding.weight",
+      "max_abs_difference": 0.0005040764808654785
+    },
+    {
+      "key": "conditioning.text_projection.bias",
+      "max_abs_difference": 0.001463588560000062
+    }
+  ]
+}
