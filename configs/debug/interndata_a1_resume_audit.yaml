@@ -24,5 +24,6 @@ train:
   weight_decay: 0.0
   warmup_fraction: 0.0
   log_every: 1
-  save_every: 100
+  save_every: 3
   bf16: true
+  deterministic: true

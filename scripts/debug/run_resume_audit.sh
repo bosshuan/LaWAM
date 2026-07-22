@@ -13,6 +13,10 @@ REFERENCE_DIR="${AUDIT_DIR}/uninterrupted"
 RESUMED_DIR="${AUDIT_DIR}/resumed"
 CONFIG="configs/debug/interndata_a1_resume_audit.yaml"
 
+# This must be present before Python initializes CUDA. The config also forces
+# deterministic algorithms, disables TF32, and selects the math SDPA backend.
+export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
+
 cd "${REPO_ROOT}"
 "${PYTHON}" -m latent_wam.train \
   --config "${CONFIG}" \
@@ -21,6 +25,10 @@ cd "${REPO_ROOT}"
   --config "${CONFIG}" \
   --output-dir "${RESUMED_DIR}" \
   --stop-after 3
+"${PYTHON}" -m latent_wam.resume_audit \
+  --reference "${REFERENCE_DIR}/checkpoints/step_00000003.pt" \
+  --candidate "${RESUMED_DIR}/checkpoints/step_00000003.pt" \
+  --output "${AUDIT_DIR}/pre_resume_audit.json"
 "${PYTHON}" -m latent_wam.train \
   --config "${CONFIG}" \
   --output-dir "${RESUMED_DIR}" \

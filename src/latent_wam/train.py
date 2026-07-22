@@ -4,6 +4,7 @@ import argparse
 import dataclasses
 import json
 import math
+import os
 import random
 import time
 from contextlib import nullcontext
@@ -76,6 +77,53 @@ def seed_everything(seed: int):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
+
+def configure_runtime(deterministic: bool) -> None:
+    """Configure CUDA kernels before distributed/CUDA initialization.
+
+    Scientific training keeps the optimized SDPA kernels and TF32 defaults.
+    The controlled resume audit instead uses deterministic cuBLAS and the math
+    SDPA backend so two independent processes can be compared bit for bit.
+    """
+    if deterministic:
+        workspace = os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+        if workspace not in {":4096:8", ":16:8"}:
+            raise ValueError(
+                "Deterministic training requires CUBLAS_WORKSPACE_CONFIG to be "
+                f":4096:8 or :16:8, got {workspace!r}"
+            )
+        torch.use_deterministic_algorithms(True)
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cuda.enable_flash_sdp(False)
+        torch.backends.cuda.enable_mem_efficient_sdp(False)
+        if hasattr(torch.backends.cuda, "enable_cudnn_sdp"):
+            torch.backends.cuda.enable_cudnn_sdp(False)
+        torch.backends.cuda.enable_math_sdp(True)
+        return
+
+    torch.use_deterministic_algorithms(False)
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+
+
+def runtime_audit_summary(deterministic: bool) -> dict[str, object]:
+    summary: dict[str, object] = {
+        "deterministic": deterministic,
+        "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
+        "cublas_workspace_config": os.environ.get("CUBLAS_WORKSPACE_CONFIG"),
+        "cuda_matmul_tf32": torch.backends.cuda.matmul.allow_tf32,
+        "cudnn_tf32": torch.backends.cudnn.allow_tf32,
+        "flash_sdp": torch.backends.cuda.flash_sdp_enabled(),
+        "memory_efficient_sdp": torch.backends.cuda.mem_efficient_sdp_enabled(),
+        "math_sdp": torch.backends.cuda.math_sdp_enabled(),
+    }
+    if hasattr(torch.backends.cuda, "cudnn_sdp_enabled"):
+        summary["cudnn_sdp"] = torch.backends.cuda.cudnn_sdp_enabled()
+    return summary
 
 
 def create_output_dir(config: ExperimentConfig, requested: str | None, rank: int) -> Path:
@@ -156,10 +204,9 @@ def build_scheduler(optimizer, config: ExperimentConfig):
 def main():
     args = parse_args()
     config = apply_overrides(load_config(args.config), args)
+    configure_runtime(config.train.deterministic)
     rank, local_rank, world_size, device = init_distributed()
     seed_everything(config.train.seed + rank)
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
     output_dir = create_output_dir(config, args.output_dir, rank)
 
     dataset = InternDataA1Dataset(config, split="train")
@@ -224,6 +271,7 @@ def main():
                     * config.train.grad_accum_steps
                     * world_size
                 ),
+                "runtime": runtime_audit_summary(config.train.deterministic),
                 "trainable_student_parameters": sum(
                     parameter.numel()
                     for parameter in model.student.parameters()

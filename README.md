@@ -96,6 +96,13 @@ from checkpoint. The audit fails unless every student tensor matches exactly:
 bash scripts/debug/run_resume_audit.sh
 ```
 
+This audit intentionally uses a slower deterministic runtime: TF32, Flash
+SDPA, memory-efficient SDPA, and cuDNN SDPA are disabled, while deterministic
+cuBLAS and math SDPA are enabled. It first writes `pre_resume_audit.json` after
+comparing both independent runs at step 3; only when that passes does it resume
+the interrupted run and write the final `resume_audit.json` at step 6. These
+settings are scoped to the audit config and do not change scientific training.
+
 Once both checks pass, validate the real frozen T5-large path and run a short
 8xA100 T5 smoke test:
 

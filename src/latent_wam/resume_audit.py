@@ -61,7 +61,14 @@ def main():
             difference = None
         mismatched.append({"key": key, "max_abs_difference": difference})
 
+    passed = not (
+        reference_step != candidate_step
+        or missing
+        or unexpected
+        or mismatched
+    )
     report = {
+        "passed": passed,
         "reference": str(Path(args.reference).resolve()),
         "candidate": str(Path(args.candidate).resolve()),
         "reference_step": reference_step,
@@ -79,12 +86,7 @@ def main():
         output = Path(args.output).expanduser().resolve()
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(serialized + "\n", encoding="utf-8")
-    if (
-        reference_step != candidate_step
-        or missing
-        or unexpected
-        or mismatched
-    ):
+    if not passed:
         raise SystemExit(1)
 
 

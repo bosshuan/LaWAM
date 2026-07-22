@@ -2,7 +2,7 @@ import dataclasses
 
 import pytest
 
-from latent_wam.config import ExperimentConfig
+from latent_wam.config import PROJECT_ROOT, ExperimentConfig, load_config
 
 
 def test_canonical_token_counts():
@@ -17,6 +17,7 @@ def test_vitg_is_uppercase_g_architecture():
     config = ExperimentConfig()
     assert config.model.encoder_depth == 48
     assert config.model.encoder_embed_dim == 1664
+    assert not config.train.deterministic
 
 
 def test_rejects_checkpoint_incompatible_predictor_shape():
@@ -44,3 +45,13 @@ def test_rejects_invalid_debug_sampling_and_lr_schedule():
     )
     with pytest.raises(ValueError, match="lr_schedule"):
         invalid_schedule.validate()
+
+
+def test_resume_audit_config_uses_controlled_deterministic_runtime():
+    config = load_config(
+        PROJECT_ROOT / "configs" / "debug" / "interndata_a1_resume_audit.yaml"
+    )
+    assert config.train.deterministic
+    assert config.train.num_workers == 0
+    assert config.train.save_every == 3
+    assert config.data.fixed_sample_index == 0

@@ -99,6 +99,7 @@ class TrainConfig:
     save_every: int = 1000
     seed: int = 239
     bf16: bool = True
+    deterministic: bool = False
     compile: bool = False
     resume: str | None = None
     init_student: str | None = None
