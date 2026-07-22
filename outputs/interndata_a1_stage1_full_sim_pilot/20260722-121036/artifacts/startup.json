@@ -1,0 +1,90 @@
+{
+  "checkpoint": "/mnt/sfs_turbo/fyy/checkpoints/vjepa2/vjepa2_1_vitG_384.pt",
+  "encoder_key": "target_encoder",
+  "encoder_parameters": 1845216768,
+  "predictor_parameters": 59433472,
+  "encoder_layers": 48,
+  "predictor_layers": 24,
+  "encoder_embed_dim": 1664,
+  "predictor_embed_dim": 384,
+  "world_size": 8,
+  "samples": 28834,
+  "output_dir": "/mnt/sfs_turbo/fyy/LaWAM/outputs/interndata_a1_stage1_full_sim_pilot/20260722-121036",
+  "stage": "future",
+  "requested_stop_after": 100,
+  "data": {
+    "raw_samples": 28834,
+    "effective_samples": 28834,
+    "fixed_sample": null,
+    "subdataset_count": 3,
+    "episode_count": 490,
+    "subdatasets": [
+      "articulation_tasks/lift2/heat_the_food_in_the_microwave",
+      "articulation_tasks/split_aloha/rotate_the_left_hearth_right_arm_counterclockwise",
+      "long_horizon_tasks/franka/put_the_trash_in_trashcan_part2"
+    ],
+    "schema_variants": [
+      {
+        "schema": "piper:actions.left_gripper.position|actions.left_joint.position|actions.right_gripper.position|actions.right_joint.position",
+        "robot_type": "piper",
+        "action_keys": [
+          "actions.left_gripper.position",
+          "actions.left_joint.position",
+          "actions.right_gripper.position",
+          "actions.right_joint.position"
+        ],
+        "state_keys": [
+          "states.left_gripper.position",
+          "states.left_joint.position",
+          "states.right_gripper.position",
+          "states.right_joint.position"
+        ],
+        "action_dim": 14,
+        "state_dim": 14,
+        "normalization_source": "episodes_stats.jsonl"
+      },
+      {
+        "schema": "piper:actions.gripper.openness|actions.gripper.position|actions.joint.position",
+        "robot_type": "piper",
+        "action_keys": [
+          "actions.gripper.openness",
+          "actions.gripper.position",
+          "actions.joint.position"
+        ],
+        "state_keys": [
+          "states.gripper.position",
+          "states.joint.position"
+        ],
+        "action_dim": 9,
+        "state_dim": 8,
+        "normalization_source": "episodes_stats.jsonl"
+      }
+    ]
+  },
+  "global_batch_size": 64,
+  "runtime": {
+    "deterministic": false,
+    "deterministic_algorithms": false,
+    "cublas_workspace_config": null,
+    "cuda_matmul_tf32": true,
+    "cudnn_tf32": true,
+    "flash_sdp": true,
+    "memory_efficient_sdp": true,
+    "math_sdp": true,
+    "cudnn_sdp": true
+  },
+  "text_encoder": {
+    "backend": "t5",
+    "model": "/mnt/sfs_turbo/fyy/checkpoints/text/t5-large",
+    "wrapper_class": "FrozenT5TextEncoder",
+    "encoder_class": "T5EncoderModel",
+    "output_dim": 1024,
+    "parameters": 334939648,
+    "trainable_parameters": 0
+  },
+  "trainable_student_parameters": 60459780,
+  "optimizer_groups": {
+    "predictor": 56867456,
+    "new": 3592324
+  }
+}
