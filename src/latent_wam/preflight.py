@@ -37,6 +37,15 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def json_default(value):
+    """Serialize container types returned by Transformers loading reports."""
+    if isinstance(value, (set, frozenset)):
+        return sorted(value, key=str)
+    if isinstance(value, Path):
+        return str(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
 def discover_info_files(root: Path, patterns, excluded) -> list[Path]:
     paths: set[Path] = set()
     for pattern in patterns:
@@ -280,7 +289,7 @@ def main():
     output = Path(args.output).expanduser().resolve() if args.output else None
     if output is not None:
         report["report_path"] = str(output)
-    serialized = json.dumps(report, indent=2)
+    serialized = json.dumps(report, indent=2, default=json_default)
     print(serialized, flush=True)
     if output is not None:
         output.parent.mkdir(parents=True, exist_ok=True)
