@@ -200,7 +200,9 @@ The JSON is written to
 `outputs/preflight/storage_manifest/<run-id>.json` even if strict validation
 returns exit code 1. A nonzero exit means one or more dataset schemas require a
 loader adapter or metadata correction; sync that report back for review and do
-not start the 32-GPU pilot yet.
+not start the 32-GPU pilot yet. This storage-view script deliberately bypasses
+`conda activate` and invokes `vjepa2-312/bin/python3.12` directly, because the
+copied Conda launcher retains an absolute `/opt/huawei` interpreter shebang.
 
 The ModelArts launcher is `scripts/h800/launch_4node.sh`. It consumes the
 platform-provided `VC_WORKER_HOSTS`, `VC_TASK_INDEX`, `MA_NUM_HOSTS`, and
