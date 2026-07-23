@@ -50,4 +50,22 @@ def test_strict_manifest_reports_unknown_control_fields(tmp_path):
     report, failures = audit_data_source("unknown", tmp_path, config)
     assert report["unsupported_control_schema_count"] == 1
     assert "action" in report["sample_unsupported_control_schema"][0]["feature_keys"]
+    assert report["control_manifest_variants"] == [
+        {
+            "feature_specs": {
+                "action": {"dtype": "float32", "shape": [7]},
+                "observation.state": {"dtype": "float32", "shape": [7]},
+            },
+            "subdatasets": 1,
+            "sample_info_files": ["dataset/meta/info.json"],
+        }
+    ]
+    assert report["normalization_key_variants"] == [
+        {
+            "source": "stats.json",
+            "keys": [],
+            "subdatasets": 1,
+            "sample_info_files": ["dataset/meta/info.json"],
+        }
+    ]
     assert any("unsupported control manifest" in failure for failure in failures)

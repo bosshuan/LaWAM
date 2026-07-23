@@ -9,18 +9,21 @@ data:
   roots:
     - /opt/huawei/dataset/data_w/processed/OXE
     - /opt/huawei/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1
-    - /opt/huawei/dataset/d_data_wulan/datasets/InternData-A1
+    - /opt/huawei/dataset/d_data_wulan/datasets/InternData-A1/real
+    - /opt/huawei/dataset/d_data_wulan/datasets/InternData-A1/sim_updated
     - /opt/huawei/dataset/data_w/processed/RoboMind
     - /opt/huawei/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized
   source_names:
     - oxe
     - agibot_world
-    - interndata_a1
+    - interndata_a1_real
+    - interndata_a1_sim_updated
     - robomind
     - robotwin
-  # Equal source probability is an engineering-pilot choice, not the final
-  # scientific mixture. Replace these explicit weights after manifest review.
-  mixture_weights: [1.0, 1.0, 1.0, 1.0, 1.0]
+  # The five datasets are equally weighted for the engineering pilot. The two
+  # InternData roots split its one-dataset share equally; sim is not used.
+  # Replace these explicit weights after manifest review.
+  mixture_weights: [1.0, 1.0, 0.5, 0.5, 1.0, 1.0]
   mixture_epoch_samples: 3200
   strict_manifest: true
   sample_stride: 10

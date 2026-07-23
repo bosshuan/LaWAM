@@ -63,6 +63,59 @@ def discover_info_files(root: Path, patterns, excluded) -> list[Path]:
     ]
 
 
+_NON_CONTROL_FEATURES = {
+    "episode_index",
+    "frame_index",
+    "index",
+    "language_raw",
+    "task_index",
+    "timestamp",
+}
+
+
+def compact_control_feature_specs(features: dict) -> dict[str, dict]:
+    """Keep enough numeric manifest detail to design an adapter safely."""
+    result: dict[str, dict] = {}
+    for key in sorted(features):
+        value = features[key]
+        if not isinstance(value, dict):
+            continue
+        dtype = str(value.get("dtype", "unspecified"))
+        if key in _NON_CONTROL_FEATURES or dtype in {"video", "string"}:
+            continue
+        result[key] = {
+            field: value[field]
+            for field in ("dtype", "shape", "names")
+            if field in value
+        }
+    return result
+
+
+def inspect_normalization_keys(meta: Path) -> tuple[str, list[str]]:
+    """Read only the normalization key names, including one JSONL row at most."""
+    stats_path = meta / "stats.json"
+    if stats_path.is_file():
+        with stats_path.open("r", encoding="utf-8") as handle:
+            stats = json.load(handle)
+        return "stats.json", sorted(stats) if isinstance(stats, dict) else []
+
+    episode_stats_path = meta / "episodes_stats.jsonl"
+    if episode_stats_path.is_file():
+        with episode_stats_path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                row = json.loads(line)
+                stats = row.get("stats", {}) if isinstance(row, dict) else {}
+                return (
+                    "episodes_stats.jsonl",
+                    sorted(stats) if isinstance(stats, dict) else [],
+                )
+        return "episodes_stats.jsonl", []
+    return "missing", []
+
+
 def audit_local_t5(model_name: str, verify_weights: bool) -> tuple[dict, list[str]]:
     """Validate the exact offline T5 path used by training."""
     report = {
@@ -171,6 +224,8 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
     }
     missing_normalization = []
     schema_variants: dict[str, dict] = {}
+    control_manifest_variants: dict[str, dict] = {}
+    normalization_key_variants: dict[str, dict] = {}
     unsupported_control_schema = []
     invalid_info_files = []
     unsupported_versions = []
@@ -202,6 +257,37 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
                 )
                 continue
             features = info.get("features", {})
+            relative_info_path = str(info_path.relative_to(root))
+            control_feature_specs = compact_control_feature_specs(features)
+            control_signature = json.dumps(control_feature_specs, sort_keys=True)
+            control_variant = control_manifest_variants.setdefault(
+                control_signature,
+                {
+                    "feature_specs": control_feature_specs,
+                    "subdatasets": 0,
+                    "sample_info_files": [],
+                },
+            )
+            control_variant["subdatasets"] += 1
+            if len(control_variant["sample_info_files"]) < 3:
+                control_variant["sample_info_files"].append(relative_info_path)
+
+            normalization_source, normalization_keys = inspect_normalization_keys(meta)
+            normalization_signature = json.dumps(
+                [normalization_source, normalization_keys], sort_keys=True
+            )
+            normalization_variant = normalization_key_variants.setdefault(
+                normalization_signature,
+                {
+                    "source": normalization_source,
+                    "keys": normalization_keys,
+                    "subdatasets": 0,
+                    "sample_info_files": [],
+                },
+            )
+            normalization_variant["subdatasets"] += 1
+            if len(normalization_variant["sample_info_files"]) < 3:
+                normalization_variant["sample_info_files"].append(relative_info_path)
             fps = str(info.get("fps", "unspecified"))
             fps_values[fps] = fps_values.get(fps, 0) + 1
             license_name = str(info.get("license", "unspecified"))
@@ -291,6 +377,8 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
             "normalization_sources": normalization_sources,
             "sample_missing_normalization": missing_normalization[:10],
             "control_schema_variants": list(schema_variants.values()),
+            "control_manifest_variants": list(control_manifest_variants.values()),
+            "normalization_key_variants": list(normalization_key_variants.values()),
             "supported_control_schema_count": sum(
                 variant["subdatasets"] for variant in schema_variants.values()
             ),

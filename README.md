@@ -186,10 +186,12 @@ Use `--resume` only when continuing the same stage and optimizer schedule.
 
 ## 4x8 H800 multi-source bring-up
 
-Before allocating H800s, audit all five manifests from a CPU node that can see
-the persistent storage paths. The training config keeps its `/opt/huawei`
-paths; the audit maps that prefix to `/home/ma-user/work` without editing the
-YAML and reads metadata only (no video decoding or model-weight loading):
+Before allocating H800s, audit all five datasets from a CPU node that can see
+the persistent storage paths. They occupy six explicit roots because
+InternData-A1 uses `real` and `sim_updated` as separate sub-sources and excludes
+`sim`. The training config keeps its `/opt/huawei` paths; the audit maps that
+prefix to `/home/ma-user/work` without editing the YAML and reads metadata only
+(no video decoding or model-weight loading):
 
 ```bash
 export LAWAM_RUN_ID=storage-manifest-001
@@ -230,12 +232,14 @@ under `outputs/preflight/h800_multisource/<run-id>/`. Review all four node
 reports before changing `LAWAM_MODE` to `pilot`.
 
 The pilot config declares OXE, AgiBot-World, InternData-A1, RoboMind, and
-RoboTwin as five explicit roots. Its equal source weights are only for
-engineering validation. Sampling first selects a source and then a sample
-within that source, so large sources cannot silently dominate. The 32-GPU
-pilot keeps global batch 64 with gradient accumulation 2 and logs the observed
-fraction from every source. Final scientific weights must be selected after
-the strict manifest reports have been reviewed.
+RoboTwin as five equally weighted datasets across six explicit roots.
+InternData-A1 `real` and `sim_updated` each receive half of InternData's pilot
+weight; `sim` receives none. These weights are only for engineering validation.
+Sampling first selects a source and then a sample within that source, so large
+sources cannot silently dominate. The 32-GPU pilot keeps global batch 64 with
+gradient accumulation 2 and logs the observed fraction from every source.
+Final scientific weights must be selected after the strict manifest reports
+have been reviewed.
 
 ## Dataset support
 
@@ -245,7 +249,9 @@ subdatasets recursively, chooses the head/main camera, and constructs masked
 joint/gripper schemas from each `info.json`. Normalization uses `meta/stats.json`
 when present; the original `sim` release is supported by frame-weighted
 aggregation of its LeRobot v2.1 `meta/episodes_stats.jsonl`. LeRobot v3.0
-directories are excluded explicitly rather than being misread as v2.1.
+directories are excluded explicitly rather than being misread as v2.1. That
+`sim` support is retained only for reproducing completed A100 bring-up checks;
+the H800 pilot and formal mixture use only `real` and `sim_updated`.
 
 InternData-A1 is distributed separately under its own CC BY-NC-SA 4.0 terms.
 No dataset files are copied into this repository.

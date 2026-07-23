@@ -50,13 +50,16 @@ def test_distributed_mixture_sampler_shards_one_deterministic_global_stream():
     assert all(0 <= index < 110 for index in full)
 
 
-def test_h800_pilot_declares_five_equal_sources_and_global_batch_64():
+def test_h800_pilot_declares_five_equal_datasets_and_global_batch_64():
     config = load_config(
         PROJECT_ROOT / "configs" / "h800" / "mixture_stage1_pilot.yaml"
     )
-    assert len(config.data.roots) == 5
-    assert len(config.data.source_names) == 5
-    assert config.data.mixture_weights == (1.0,) * 5
+    assert len(config.data.roots) == 6
+    assert len(config.data.source_names) == 6
+    assert config.data.mixture_weights == (1.0, 1.0, 0.5, 0.5, 1.0, 1.0)
+    assert config.data.roots[2].endswith("/InternData-A1/real")
+    assert config.data.roots[3].endswith("/InternData-A1/sim_updated")
+    assert all(not root.endswith("/InternData-A1/sim") for root in config.data.roots)
     assert config.data.strict_manifest
     assert config.data.mixture_epoch_samples == 3200
     assert config.train.batch_size_per_gpu * config.train.grad_accum_steps * 32 == 64
