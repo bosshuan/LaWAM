@@ -1,0 +1,4943 @@
+{
+  "audit_kind": "cpu_storage_manifest",
+  "config_path": "/home/ma-user/work/dataset/d_env_wulan/LaWAM/configs/h800/mixture_stage1_pilot.yaml",
+  "config": {
+    "video": {
+      "resolution": 384,
+      "context_frames": 8,
+      "future_frames": 4,
+      "video_fps": 4.0,
+      "patch_size": 16,
+      "tubelet_size": 2,
+      "camera_key": "auto"
+    },
+    "action": {
+      "chunk_size": 10,
+      "action_hz": 10.0,
+      "proprio_history": 4,
+      "past_action_history": 2,
+      "max_action_dim": 32,
+      "max_proprio_dim": 64,
+      "schema_buckets": 1024
+    },
+    "model": {
+      "checkpoint": "/opt/huawei/dataset/d_env_wulan/vjepa2/checkpoints/vjepa2_1_vitG_384.pt",
+      "encoder_embed_dim": 1664,
+      "encoder_depth": 48,
+      "predictor_embed_dim": 384,
+      "predictor_depth": 24,
+      "predictor_heads": 12,
+      "predictor_mask_tokens": 8,
+      "joint_start_block": 12,
+      "reciprocal_start_block": 18,
+      "joint_attention": "time_aligned",
+      "conditioning_blocks": [
+        4,
+        11,
+        17,
+        23
+      ],
+      "activation_checkpointing": true,
+      "text_backend": "t5",
+      "text_model": "/opt/huawei/dataset/d_env_wulan/text/t5-large",
+      "text_local_files_only": true,
+      "max_text_tokens": 64,
+      "hash_vocab_size": 32768
+    },
+    "data": {
+      "root": "/mnt/sfs_turbo/rl/InternData-A1/sim",
+      "roots": [
+        "/opt/huawei/dataset/data_w/processed/OXE",
+        "/opt/huawei/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1",
+        "/opt/huawei/dataset/d_data_wulan/datasets/InternData-A1/real",
+        "/opt/huawei/dataset/d_data_wulan/datasets/InternData-A1/sim_updated",
+        "/opt/huawei/dataset/data_w/processed/RoboMind",
+        "/opt/huawei/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized"
+      ],
+      "source_names": [
+        "oxe",
+        "agibot_world",
+        "interndata_a1_real",
+        "interndata_a1_sim_updated",
+        "robomind",
+        "robotwin"
+      ],
+      "mixture_weights": [
+        1.0,
+        1.0,
+        0.5,
+        0.5,
+        1.0,
+        1.0
+      ],
+      "mixture_epoch_samples": 3200,
+      "strict_manifest": true,
+      "backend": "lerobot_v21",
+      "include_globs": [
+        "**/meta/info.json"
+      ],
+      "exclude_contains": [
+        "real_lerobotv30",
+        "sim_updated_lerobotv30"
+      ],
+      "sample_stride": 10,
+      "max_subdatasets": null,
+      "max_episodes_per_subdataset": null,
+      "fixed_sample_index": null,
+      "decode_threads": 1,
+      "train_fraction": 0.995,
+      "seed": 239
+    },
+    "loss": {
+      "future_weight": 1.0,
+      "action_weight": 1.0,
+      "smoothness_weight": 0.01,
+      "gripper_weight": 1.0,
+      "huber_delta": 1.0,
+      "normalize_future_levels": true
+    },
+    "train": {
+      "run_name": "h800_4node_stage1_mixture_pilot",
+      "output_root": "outputs",
+      "stage": "future",
+      "max_steps": 50,
+      "batch_size_per_gpu": 1,
+      "grad_accum_steps": 2,
+      "num_workers": 2,
+      "predictor_lr": 1e-05,
+      "new_module_lr": 0.0003,
+      "lr_schedule": "cosine",
+      "min_lr_ratio": 0.01,
+      "weight_decay": 0.05,
+      "warmup_fraction": 0.05,
+      "gradient_clip": 1.0,
+      "log_every": 5,
+      "save_every": 25,
+      "seed": 239,
+      "bf16": true,
+      "deterministic": false,
+      "compile": false,
+      "resume": null,
+      "init_student": null,
+      "find_unused_parameters": false
+    }
+  },
+  "path_mapping": {
+    "training_prefix": "/opt/huawei",
+    "storage_prefix": "/home/ma-user/work"
+  },
+  "model_weights_loaded": false,
+  "cuda_operations_requested": false,
+  "data_mixture": {
+    "strict_manifest": true,
+    "mixture_epoch_samples": 3200,
+    "weights": {
+      "oxe": 0.2,
+      "agibot_world": 0.2,
+      "interndata_a1_real": 0.1,
+      "interndata_a1_sim_updated": 0.1,
+      "robomind": 0.2,
+      "robotwin": 0.2
+    }
+  },
+  "mapped_data_roots": [
+    "/home/ma-user/work/dataset/data_w/processed/OXE",
+    "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1",
+    "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real",
+    "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated",
+    "/home/ma-user/work/dataset/data_w/processed/RoboMind",
+    "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized"
+  ],
+  "data_sources": [
+    {
+      "name": "oxe",
+      "root": "/home/ma-user/work/dataset/data_w/processed/OXE",
+      "root_exists": true,
+      "lerobot_v21_subdatasets": 31,
+      "sample_info_files": [
+        "/home/ma-user/work/dataset/data_w/processed/OXE/austin_buds_dataset_lerobot/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/austin_sailor_dataset_lerobot/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/austin_sirius_dataset_lerobot/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/bc_z_lerobot/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_autolab_ur5_lerobot/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_cable_routing_lerobot/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_fanuc_manipulation_lerobot/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_mvp_lerobot/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_rpt_lerobot/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/bridge_orig_lerobot/meta/info.json"
+      ],
+      "codebase_versions": {
+        "v2.0": 20,
+        "v2.1": 11
+      },
+      "normalization_sources": {
+        "stats.json": 0,
+        "episodes_stats.jsonl": 12,
+        "missing": 19
+      },
+      "sample_missing_normalization": [
+        "/home/ma-user/work/dataset/data_w/processed/OXE/austin_buds_dataset_lerobot/meta",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/austin_sirius_dataset_lerobot/meta",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_mvp_lerobot/meta",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_rpt_lerobot/meta",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/bridge_orig_lerobot/meta",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/cmu_play_fusion_lerobot/meta",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/dobbe_lerobot/meta",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/droid_lerobot/meta",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/fractal20220817_data_lerobot/meta",
+        "/home/ma-user/work/dataset/data_w/processed/OXE/furniture_bench_dataset_lerobot/meta"
+      ],
+      "control_schema_variants": [],
+      "control_manifest_variants": [
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "roll",
+                  "pitch",
+                  "yaw",
+                  "gripper"
+                ]
+              }
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "motor_0",
+                  "motor_1",
+                  "motor_2",
+                  "motor_3",
+                  "motor_4",
+                  "motor_5",
+                  "motor_6",
+                  "gripper"
+                ]
+              }
+            }
+          },
+          "subdatasets": 3,
+          "sample_info_files": [
+            "austin_buds_dataset_lerobot/meta/info.json",
+            "cmu_play_fusion_lerobot/meta/info.json",
+            "utaustin_mutex_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "roll",
+                  "pitch",
+                  "yaw",
+                  "gripper"
+                ]
+              }
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "rx",
+                  "ry",
+                  "rz",
+                  "rw",
+                  "gripper"
+                ]
+              }
+            }
+          },
+          "subdatasets": 6,
+          "sample_info_files": [
+            "austin_sailor_dataset_lerobot/meta/info.json",
+            "austin_sirius_dataset_lerobot/meta/info.json",
+            "berkeley_autolab_ur5_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "roll",
+                  "pitch",
+                  "yaw",
+                  "gripper"
+                ]
+              }
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "roll",
+                  "pitch",
+                  "yaw",
+                  "pad",
+                  "gripper"
+                ]
+              }
+            }
+          },
+          "subdatasets": 12,
+          "sample_info_files": [
+            "bc_z_lerobot/meta/info.json",
+            "bridge_orig_lerobot/meta/info.json",
+            "cmu_stretch_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "roll",
+                  "pitch",
+                  "yaw",
+                  "gripper"
+                ]
+              }
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "motor_0",
+                  "motor_1",
+                  "motor_2",
+                  "motor_3",
+                  "motor_4",
+                  "motor_5",
+                  "motor_6",
+                  "pad"
+                ]
+              }
+            }
+          },
+          "subdatasets": 2,
+          "sample_info_files": [
+            "berkeley_cable_routing_lerobot/meta/info.json",
+            "toto_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "roll",
+                  "pitch",
+                  "yaw",
+                  "gripper"
+                ]
+              }
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "motor_0",
+                  "motor_1",
+                  "motor_2",
+                  "motor_3",
+                  "motor_4",
+                  "motor_5",
+                  "pad",
+                  "gripper"
+                ]
+              }
+            }
+          },
+          "subdatasets": 1,
+          "sample_info_files": [
+            "berkeley_fanuc_manipulation_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "motor_0",
+                  "motor_1",
+                  "motor_2",
+                  "motor_3",
+                  "motor_4",
+                  "motor_5",
+                  "motor_6",
+                  "gripper"
+                ]
+              }
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "rx",
+                  "ry",
+                  "rz",
+                  "rw",
+                  "gripper"
+                ]
+              }
+            }
+          },
+          "subdatasets": 1,
+          "sample_info_files": [
+            "berkeley_mvp_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "motor_0",
+                  "motor_1",
+                  "motor_2",
+                  "motor_3",
+                  "motor_4",
+                  "motor_5",
+                  "motor_6",
+                  "gripper"
+                ]
+              }
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "motor_0",
+                  "motor_1",
+                  "motor_2",
+                  "motor_3",
+                  "motor_4",
+                  "motor_5",
+                  "motor_6",
+                  "gripper"
+                ]
+              }
+            }
+          },
+          "subdatasets": 1,
+          "sample_info_files": [
+            "berkeley_rpt_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "roll",
+                  "pitch",
+                  "yaw",
+                  "gripper"
+                ]
+              }
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": {
+                "motors": [
+                  "motor_0",
+                  "motor_1",
+                  "motor_2",
+                  "motor_3",
+                  "motor_4",
+                  "motor_5",
+                  "motor_6",
+                  "motor_7"
+                ]
+              }
+            }
+          },
+          "subdatasets": 5,
+          "sample_info_files": [
+            "iamlab_cmu_pickup_insert_lerobot/meta/info.json",
+            "nyu_door_opening_surprising_effectiveness_lerobot/meta/info.json",
+            "roboturk_lerobot/meta/info.json"
+          ]
+        }
+      ],
+      "normalization_key_variants": [
+        {
+          "source": "missing",
+          "keys": [],
+          "subdatasets": 19,
+          "sample_info_files": [
+            "austin_buds_dataset_lerobot/meta/info.json",
+            "austin_sirius_dataset_lerobot/meta/info.json",
+            "berkeley_mvp_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.images.wrist_image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 3,
+          "sample_info_files": [
+            "austin_sailor_dataset_lerobot/meta/info.json",
+            "berkeley_fanuc_manipulation_lerobot/meta/info.json",
+            "stanford_hydra_dataset_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 3,
+          "sample_info_files": [
+            "bc_z_lerobot/meta/info.json",
+            "cmu_stretch_lerobot/meta/info.json",
+            "dlr_edan_shared_control_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_image",
+            "observation.images.image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 1,
+          "sample_info_files": [
+            "berkeley_autolab_ur5_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.images.top_image",
+            "observation.images.wrist225_image",
+            "observation.images.wrist45_image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 1,
+          "sample_info_files": [
+            "berkeley_cable_routing_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image_side_1",
+            "observation.images.image_side_2",
+            "observation.images.image_wrist_1",
+            "observation.images.image_wrist_2",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 1,
+          "sample_info_files": [
+            "fmb_dataset_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.images.image_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 1,
+          "sample_info_files": [
+            "jaco_play_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.images.image_additional_view",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 1,
+          "sample_info_files": [
+            "nyu_franka_play_dataset_lerobot/meta/info.json"
+          ]
+        },
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.rgb_gripper",
+            "observation.images.rgb_static",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 1,
+          "sample_info_files": [
+            "taco_play_lerobot/meta/info.json"
+          ]
+        }
+      ],
+      "supported_control_schema_count": 0,
+      "unsupported_control_schema_count": 31,
+      "sample_unsupported_control_schema": [
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/austin_buds_dataset_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.images.wrist_image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.image",
+            "observation.images.wrist_image"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/austin_sailor_dataset_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.images.wrist_image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.image",
+            "observation.images.wrist_image"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/austin_sirius_dataset_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.images.wrist_image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.image",
+            "observation.images.wrist_image"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/bc_z_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.image"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_autolab_ur5_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_image",
+            "observation.images.image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_image",
+            "observation.images.image"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_cable_routing_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.images.top_image",
+            "observation.images.wrist225_image",
+            "observation.images.wrist45_image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.image",
+            "observation.images.top_image",
+            "observation.images.wrist225_image",
+            "observation.images.wrist45_image"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_fanuc_manipulation_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image",
+            "observation.images.wrist_image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.image",
+            "observation.images.wrist_image"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_mvp_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_image"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/berkeley_rpt_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_image",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_image"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/OXE/bridge_orig_lerobot/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.image_0",
+            "observation.images.image_1",
+            "observation.images.image_2",
+            "observation.images.image_3",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.image_0",
+            "observation.images.image_1",
+            "observation.images.image_2",
+            "observation.images.image_3"
+          ]
+        }
+      ],
+      "invalid_info_files": [],
+      "unsupported_version_count": 0,
+      "sample_unsupported_versions": [],
+      "missing_video_feature_count": 0,
+      "sample_missing_video_features": [],
+      "missing_task_metadata_count": 0,
+      "sample_missing_task_metadata": [],
+      "oversized_control_schema_count": 0,
+      "sample_oversized_control_schemas": [],
+      "robot_types": {},
+      "camera_keys": {
+        "observation.images.image": 21,
+        "observation.images.wrist_image": 9,
+        "observation.images.hand_image": 3,
+        "observation.images.top_image": 1,
+        "observation.images.wrist225_image": 1,
+        "observation.images.wrist45_image": 1,
+        "observation.images.image_0": 1,
+        "observation.images.image_1": 1,
+        "observation.images.image_2": 1,
+        "observation.images.image_3": 1,
+        "observation.images.exterior_image_1_left": 1,
+        "observation.images.exterior_image_2_left": 1,
+        "observation.images.wrist_image_left": 1,
+        "observation.images.image_side_1": 1,
+        "observation.images.image_side_2": 1,
+        "observation.images.image_wrist_1": 1,
+        "observation.images.image_wrist_2": 1,
+        "observation.images.image_wrist": 1,
+        "observation.images.rgb": 1,
+        "observation.images.image_additional_view": 1,
+        "observation.images.front_rgb": 1,
+        "observation.images.rgb_gripper": 1,
+        "observation.images.rgb_static": 1,
+        "observation.images.agentview_rgb": 1,
+        "observation.images.eye_in_hand_rgb": 1
+      },
+      "fps_values": {
+        "20": 6,
+        "10": 11,
+        "5": 5,
+        "30": 2,
+        "3.75": 1,
+        "15": 2,
+        "3": 3,
+        "2": 1
+      },
+      "licenses": {
+        "unspecified": 31
+      },
+      "configured_training_root": "/opt/huawei/dataset/data_w/processed/OXE",
+      "storage_audit_root": "/home/ma-user/work/dataset/data_w/processed/OXE",
+      "sample_top_level_entries": [
+        {
+          "name": "austin_buds_dataset_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "austin_sailor_dataset_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "austin_sirius_dataset_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "bc_z_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "berkeley_autolab_ur5_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "berkeley_cable_routing_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "berkeley_fanuc_manipulation_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "berkeley_mvp_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "berkeley_rpt_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "bridge_orig_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "cmu_play_fusion_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "cmu_stretch_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "dlr_edan_shared_control_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "dobbe_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "droid_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "fmb_dataset_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "fractal20220817_data_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "furniture_bench_dataset_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "iamlab_cmu_pickup_insert_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "jaco_play_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "kuka_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "language_table_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "nyu_door_opening_surprising_effectiveness_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "nyu_franka_play_dataset_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "roboturk_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "stanford_hydra_dataset_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "taco_play_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "toto_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "ucsd_kitchen_dataset_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "utaustin_mutex_lerobot",
+          "kind": "directory"
+        },
+        {
+          "name": "viola_lerobot",
+          "kind": "directory"
+        }
+      ]
+    },
+    {
+      "name": "agibot_world",
+      "root": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1",
+      "root_exists": true,
+      "lerobot_v21_subdatasets": 188,
+      "sample_info_files": [
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_327/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_351/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_352/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_354/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_356/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_357/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_358/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_359/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_360/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_361/meta/info.json"
+      ],
+      "codebase_versions": {
+        "v2.1": 188
+      },
+      "normalization_sources": {
+        "stats.json": 0,
+        "episodes_stats.jsonl": 188,
+        "missing": 0
+      },
+      "sample_missing_normalization": [],
+      "control_schema_variants": [],
+      "control_manifest_variants": [
+        {
+          "feature_specs": {
+            "actions.effector.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": {
+                "motors": [
+                  "left_gripper",
+                  "right_gripper"
+                ]
+              }
+            },
+            "actions.end.orientation": {
+              "dtype": "float32",
+              "shape": [
+                2,
+                4
+              ],
+              "names": {
+                "motors": [
+                  "left_xyzw",
+                  "right_xyzw"
+                ]
+              }
+            },
+            "actions.end.position": {
+              "dtype": "float32",
+              "shape": [
+                2,
+                3
+              ],
+              "names": {
+                "motors": [
+                  "left_xyz",
+                  "right_xyz"
+                ]
+              }
+            },
+            "actions.head.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": {
+                "motors": [
+                  "yaw",
+                  "patch"
+                ]
+              }
+            },
+            "actions.joint.position": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": {
+                "motors": [
+                  "left_arm_0",
+                  "left_arm_1",
+                  "left_arm_2",
+                  "left_arm_3",
+                  "left_arm_4",
+                  "left_arm_5",
+                  "left_arm_6",
+                  "right_arm_0",
+                  "right_arm_1",
+                  "right_arm_2",
+                  "right_arm_3",
+                  "right_arm_4",
+                  "right_arm_5",
+                  "right_arm_6"
+                ]
+              }
+            },
+            "actions.robot.velocity": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": {
+                "motors": [
+                  "x_vel",
+                  "yaw_vel"
+                ]
+              }
+            },
+            "actions.waist.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": {
+                "motors": [
+                  "pitch",
+                  "lift"
+                ]
+              }
+            },
+            "observation.states.effector.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": {
+                "motors": [
+                  "left_gripper",
+                  "right_gripper"
+                ]
+              }
+            },
+            "observation.states.end.orientation": {
+              "dtype": "float32",
+              "shape": [
+                2,
+                4
+              ],
+              "names": {
+                "motors": [
+                  "left_xyzw",
+                  "right_xyzw"
+                ]
+              }
+            },
+            "observation.states.end.position": {
+              "dtype": "float32",
+              "shape": [
+                2,
+                3
+              ],
+              "names": {
+                "motors": [
+                  "left_xyz",
+                  "right_xyz"
+                ]
+              }
+            },
+            "observation.states.head.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": {
+                "motors": [
+                  "yaw",
+                  "patch"
+                ]
+              }
+            },
+            "observation.states.joint.current_value": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": {
+                "motors": [
+                  "left_arm_0",
+                  "left_arm_1",
+                  "left_arm_2",
+                  "left_arm_3",
+                  "left_arm_4",
+                  "left_arm_5",
+                  "left_arm_6",
+                  "right_arm_0",
+                  "right_arm_1",
+                  "right_arm_2",
+                  "right_arm_3",
+                  "right_arm_4",
+                  "right_arm_5",
+                  "right_arm_6"
+                ]
+              }
+            },
+            "observation.states.joint.position": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": {
+                "motors": [
+                  "left_arm_0",
+                  "left_arm_1",
+                  "left_arm_2",
+                  "left_arm_3",
+                  "left_arm_4",
+                  "left_arm_5",
+                  "left_arm_6",
+                  "right_arm_0",
+                  "right_arm_1",
+                  "right_arm_2",
+                  "right_arm_3",
+                  "right_arm_4",
+                  "right_arm_5",
+                  "right_arm_6"
+                ]
+              }
+            },
+            "observation.states.robot.orientation": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z",
+                  "w"
+                ]
+              }
+            },
+            "observation.states.robot.position": {
+              "dtype": "float32",
+              "shape": [
+                3
+              ],
+              "names": {
+                "motors": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            },
+            "observation.states.waist.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": {
+                "motors": [
+                  "pitch",
+                  "lift"
+                ]
+              }
+            }
+          },
+          "subdatasets": 188,
+          "sample_info_files": [
+            "agibotworld/task_327/meta/info.json",
+            "agibotworld/task_351/meta/info.json",
+            "agibotworld/task_352/meta/info.json"
+          ]
+        }
+      ],
+      "normalization_key_variants": [
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 188,
+          "sample_info_files": [
+            "agibotworld/task_327/meta/info.json",
+            "agibotworld/task_351/meta/info.json",
+            "agibotworld/task_352/meta/info.json"
+          ]
+        }
+      ],
+      "supported_control_schema_count": 0,
+      "unsupported_control_schema_count": 188,
+      "sample_unsupported_control_schema": [
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_327/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_351/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_352/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_354/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_356/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_357/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_358/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_359/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_360/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1/agibotworld/task_361/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.end.orientation",
+            "actions.end.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.robot.velocity",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye",
+            "observation.states.effector.position",
+            "observation.states.end.orientation",
+            "observation.states.end.position",
+            "observation.states.head.position",
+            "observation.states.joint.current_value",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.back_left_fisheye",
+            "observation.images.back_right_fisheye",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.images.head_center_fisheye",
+            "observation.images.head_left_fisheye",
+            "observation.images.head_right_fisheye"
+          ]
+        }
+      ],
+      "invalid_info_files": [],
+      "unsupported_version_count": 0,
+      "sample_unsupported_versions": [],
+      "missing_video_feature_count": 0,
+      "sample_missing_video_features": [],
+      "missing_task_metadata_count": 0,
+      "sample_missing_task_metadata": [],
+      "oversized_control_schema_count": 0,
+      "sample_oversized_control_schemas": [],
+      "robot_types": {},
+      "camera_keys": {
+        "observation.images.back_left_fisheye": 188,
+        "observation.images.back_right_fisheye": 188,
+        "observation.images.hand_left": 188,
+        "observation.images.hand_right": 188,
+        "observation.images.head": 188,
+        "observation.images.head_center_fisheye": 188,
+        "observation.images.head_left_fisheye": 188,
+        "observation.images.head_right_fisheye": 188
+      },
+      "fps_values": {
+        "30": 188
+      },
+      "licenses": {
+        "unspecified": 188
+      },
+      "configured_training_root": "/opt/huawei/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1",
+      "storage_audit_root": "/home/ma-user/work/dataset/data_w/processed/AgiBotWorld-Beta-lerobot2.1",
+      "sample_top_level_entries": [
+        {
+          "name": "agibotworld",
+          "kind": "directory"
+        }
+      ]
+    },
+    {
+      "name": "interndata_a1_real",
+      "root": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real",
+      "root_exists": true,
+      "lerobot_v21_subdatasets": 9,
+      "sample_info_files": [
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pick_a_bag_of_bread_with_the_left_arm__then_handover/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pick_up_the_flower_and_insert_it_into_the_vase/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pickup_a_bag_of_potato_chips_and_put_it_in_the_shopping_cart/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pickup_a_bottle_of_black_tea_and_place_it_into_the_shopping_cart/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pickup_a_bottle_of_black_tea_into_the_basket/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Put_the_pen_from_the_table_into_the_pen_holder/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/pick_a_bottle_of_black_tea_and_hand_over_to_the_person/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/pickup_a_bag_of_bread_into_the_basket/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/pickup_a_bag_of_chip_to_the_basket/meta/info.json"
+      ],
+      "codebase_versions": {
+        "v2.1": 9
+      },
+      "normalization_sources": {
+        "stats.json": 9,
+        "episodes_stats.jsonl": 0,
+        "missing": 0
+      },
+      "sample_missing_normalization": [],
+      "control_schema_variants": [],
+      "control_manifest_variants": [
+        {
+          "feature_specs": {
+            "actions.effector.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": [
+                "left_gripper",
+                "right_gripper"
+              ]
+            },
+            "actions.head.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": [
+                "yaw",
+                "patch"
+              ]
+            },
+            "actions.joint.position": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "left_arm_0",
+                "left_arm_1",
+                "left_arm_2",
+                "left_arm_3",
+                "left_arm_4",
+                "left_arm_5",
+                "left_arm_6",
+                "right_arm_0",
+                "right_arm_1",
+                "right_arm_2",
+                "right_arm_3",
+                "right_arm_4",
+                "right_arm_5",
+                "right_arm_6"
+              ]
+            },
+            "actions.waist.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": [
+                "pitch",
+                "lift"
+              ]
+            },
+            "observation.states.effector.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": [
+                "left_gripper",
+                "right_gripper"
+              ]
+            },
+            "observation.states.head.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": [
+                "yaw",
+                "patch"
+              ]
+            },
+            "observation.states.joint.position": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "left_arm_0",
+                "left_arm_1",
+                "left_arm_2",
+                "left_arm_3",
+                "left_arm_4",
+                "left_arm_5",
+                "left_arm_6",
+                "right_arm_0",
+                "right_arm_1",
+                "right_arm_2",
+                "right_arm_3",
+                "right_arm_4",
+                "right_arm_5",
+                "right_arm_6"
+              ]
+            },
+            "observation.states.robot.orientation": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": [
+                "x",
+                "y",
+                "z",
+                "w"
+              ]
+            },
+            "observation.states.robot.position": {
+              "dtype": "float32",
+              "shape": [
+                3
+              ],
+              "names": [
+                "x",
+                "y",
+                "z"
+              ]
+            },
+            "observation.states.waist.position": {
+              "dtype": "float32",
+              "shape": [
+                2
+              ],
+              "names": [
+                "pitch",
+                "lift"
+              ]
+            }
+          },
+          "subdatasets": 9,
+          "sample_info_files": [
+            "genie1/Pick_a_bag_of_bread_with_the_left_arm__then_handover/meta/info.json",
+            "genie1/Pick_up_the_flower_and_insert_it_into_the_vase/meta/info.json",
+            "genie1/Pickup_a_bag_of_potato_chips_and_put_it_in_the_shopping_cart/meta/info.json"
+          ]
+        }
+      ],
+      "normalization_key_variants": [
+        {
+          "source": "stats.json",
+          "keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 9,
+          "sample_info_files": [
+            "genie1/Pick_a_bag_of_bread_with_the_left_arm__then_handover/meta/info.json",
+            "genie1/Pick_up_the_flower_and_insert_it_into_the_vase/meta/info.json",
+            "genie1/Pickup_a_bag_of_potato_chips_and_put_it_in_the_shopping_cart/meta/info.json"
+          ]
+        }
+      ],
+      "supported_control_schema_count": 0,
+      "unsupported_control_schema_count": 9,
+      "sample_unsupported_control_schema": [
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pick_a_bag_of_bread_with_the_left_arm__then_handover/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pick_up_the_flower_and_insert_it_into_the_vase/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pickup_a_bag_of_potato_chips_and_put_it_in_the_shopping_cart/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pickup_a_bottle_of_black_tea_and_place_it_into_the_shopping_cart/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Pickup_a_bottle_of_black_tea_into_the_basket/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/Put_the_pen_from_the_table_into_the_pen_holder/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/pick_a_bottle_of_black_tea_and_hand_over_to_the_person/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/pickup_a_bag_of_bread_into_the_basket/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real/genie1/pickup_a_bag_of_chip_to_the_basket/meta/info.json",
+          "feature_keys": [
+            "actions.effector.position",
+            "actions.head.position",
+            "actions.joint.position",
+            "actions.waist.position",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head",
+            "observation.states.effector.position",
+            "observation.states.head.position",
+            "observation.states.joint.position",
+            "observation.states.robot.orientation",
+            "observation.states.robot.position",
+            "observation.states.waist.position",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.hand_left",
+            "observation.images.hand_right",
+            "observation.images.head"
+          ]
+        }
+      ],
+      "invalid_info_files": [],
+      "unsupported_version_count": 0,
+      "sample_unsupported_versions": [],
+      "missing_video_feature_count": 0,
+      "sample_missing_video_features": [],
+      "missing_task_metadata_count": 0,
+      "sample_missing_task_metadata": [],
+      "oversized_control_schema_count": 0,
+      "sample_oversized_control_schemas": [],
+      "robot_types": {},
+      "camera_keys": {
+        "observation.images.hand_left": 9,
+        "observation.images.hand_right": 9,
+        "observation.images.head": 9
+      },
+      "fps_values": {
+        "30": 9
+      },
+      "licenses": {
+        "unspecified": 9
+      },
+      "configured_training_root": "/opt/huawei/dataset/d_data_wulan/datasets/InternData-A1/real",
+      "storage_audit_root": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/real",
+      "sample_top_level_entries": [
+        {
+          "name": "genie1",
+          "kind": "directory"
+        }
+      ]
+    },
+    {
+      "name": "interndata_a1_sim_updated",
+      "root": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated",
+      "root_exists": true,
+      "lerobot_v21_subdatasets": 1487,
+      "sample_info_files": [
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/close_the_electriccooker/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/close_the_microwave_part1/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/close_the_microwave_part2/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/close_the_pot/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/close_the_trashcan/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/close_the_washingmachine_left/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/close_the_washingmachine_right/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/open_the_laptop/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/open_the_microwave_part1/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/articulation_tasks/franka/open_the_microwave_part2/meta/info.json"
+      ],
+      "codebase_versions": {
+        "v2.1": 1487
+      },
+      "normalization_sources": {
+        "stats.json": 0,
+        "episodes_stats.jsonl": 1484,
+        "missing": 3
+      },
+      "sample_missing_normalization": [
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/long_horizon_tasks/lift2/handover_objects_right_left_part8/meta",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/franka/multiple_pick_and_place_part2/basket/meta",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/split_aloha/single_pick_right_arm/omniobject3d-pitaya/meta"
+      ],
+      "control_schema_variants": [
+        {
+          "robot_type": "franka",
+          "action_keys": [
+            "actions.gripper.openness",
+            "actions.gripper.position",
+            "actions.joint.position"
+          ],
+          "state_keys": [
+            "states.gripper.position",
+            "states.joint.position"
+          ],
+          "action_dim": 9,
+          "state_dim": 8,
+          "binary_gripper": true,
+          "subdatasets": 263
+        },
+        {
+          "robot_type": "ARX_Lift-2",
+          "action_keys": [
+            "actions.left_gripper.position",
+            "actions.left_joint.position",
+            "actions.right_gripper.position",
+            "actions.right_joint.position"
+          ],
+          "state_keys": [
+            "states.left_gripper.position",
+            "states.left_joint.position",
+            "states.right_gripper.position",
+            "states.right_joint.position"
+          ],
+          "action_dim": 14,
+          "state_dim": 14,
+          "binary_gripper": false,
+          "subdatasets": 383
+        },
+        {
+          "robot_type": "AgileX_Split_Aloha",
+          "action_keys": [
+            "actions.left_gripper.position",
+            "actions.left_joint.position",
+            "actions.right_gripper.position",
+            "actions.right_joint.position"
+          ],
+          "state_keys": [
+            "states.left_gripper.position",
+            "states.left_joint.position",
+            "states.right_gripper.position",
+            "states.right_joint.position"
+          ],
+          "action_dim": 14,
+          "state_dim": 14,
+          "binary_gripper": false,
+          "subdatasets": 317
+        },
+        {
+          "robot_type": "AgiBot_Genie-1",
+          "action_keys": [
+            "actions.left_gripper.position",
+            "actions.left_joint.position",
+            "actions.right_gripper.position",
+            "actions.right_joint.position"
+          ],
+          "state_keys": [
+            "states.left_gripper.position",
+            "states.left_joint.position",
+            "states.right_gripper.position",
+            "states.right_joint.position"
+          ],
+          "action_dim": 16,
+          "state_dim": 16,
+          "binary_gripper": false,
+          "subdatasets": 521
+        }
+      ],
+      "control_manifest_variants": [
+        {
+          "feature_specs": {
+            "actions.ee_to_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.gripper.openness": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "gripper_0"
+              ]
+            },
+            "actions.gripper.pose": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+              ]
+            },
+            "actions.gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "gripper_0"
+              ]
+            },
+            "actions.joint.position": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "joint_0",
+                "joint_1",
+                "joint_2",
+                "joint_3",
+                "joint_4",
+                "joint_5",
+                "joint_6"
+              ]
+            },
+            "actions.tcp_to_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "hand_camera_intrinsics": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": [
+                "fx",
+                "fy",
+                "cx",
+                "cy"
+              ]
+            },
+            "hand_camera_to_robot_extrinsics": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "head_camera_intrinsics": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": [
+                "fx",
+                "fy",
+                "cx",
+                "cy"
+              ]
+            },
+            "head_camera_to_robot_extrinsics": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "master_actions.gripper.openness": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "gripper_0"
+              ]
+            },
+            "master_actions.gripper.pose": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+              ]
+            },
+            "master_actions.gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "gripper_0"
+              ]
+            },
+            "master_actions.joint.position": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "joint_0",
+                "joint_1",
+                "joint_2",
+                "joint_3",
+                "joint_4",
+                "joint_5",
+                "joint_6"
+              ]
+            },
+            "states.ee_to_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.gripper.pose": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+              ]
+            },
+            "states.gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "gripper_0"
+              ]
+            },
+            "states.joint.position": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "joint_0",
+                "joint_1",
+                "joint_2",
+                "joint_3",
+                "joint_4",
+                "joint_5",
+                "joint_6"
+              ]
+            },
+            "states.robot_to_env_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.tcp_to_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            }
+          },
+          "subdatasets": 264,
+          "sample_info_files": [
+            "articulation_tasks/franka/close_the_electriccooker/meta/info.json",
+            "articulation_tasks/franka/close_the_microwave_part1/meta/info.json",
+            "articulation_tasks/franka/close_the_microwave_part2/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "actions.left_ee_to_left_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.left_ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.left_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "left_gripper_0"
+              ]
+            },
+            "actions.left_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "left_joint_0",
+                "left_joint_1",
+                "left_joint_2",
+                "left_joint_3",
+                "left_joint_4",
+                "left_joint_5"
+              ]
+            },
+            "actions.left_tcp_to_left_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.left_tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.right_ee_to_right_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.right_ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.right_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "right_gripper_0"
+              ]
+            },
+            "actions.right_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "right_joint_0",
+                "right_joint_1",
+                "right_joint_2",
+                "right_joint_3",
+                "right_joint_4",
+                "right_joint_5"
+              ]
+            },
+            "actions.right_tcp_to_right_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.right_tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "hand_left_camera_intrinsics": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": [
+                "fx",
+                "fy",
+                "cx",
+                "cy"
+              ]
+            },
+            "hand_left_camera_to_robot_extrinsics": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "hand_right_camera_intrinsics": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": [
+                "fx",
+                "fy",
+                "cx",
+                "cy"
+              ]
+            },
+            "hand_right_camera_to_robot_extrinsics": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "head_camera_intrinsics": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": [
+                "fx",
+                "fy",
+                "cx",
+                "cy"
+              ]
+            },
+            "head_camera_to_robot_extrinsics": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "master_actions.left_gripper.openness": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "left_gripper_0"
+              ]
+            },
+            "master_actions.left_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "left_gripper_0"
+              ]
+            },
+            "master_actions.left_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "left_joint_0",
+                "left_joint_1",
+                "left_joint_2",
+                "left_joint_3",
+                "left_joint_4",
+                "left_joint_5"
+              ]
+            },
+            "master_actions.right_gripper.openness": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "right_gripper_0"
+              ]
+            },
+            "master_actions.right_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "right_gripper_0"
+              ]
+            },
+            "master_actions.right_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "right_joint_0",
+                "right_joint_1",
+                "right_joint_2",
+                "right_joint_3",
+                "right_joint_4",
+                "right_joint_5"
+              ]
+            },
+            "states.left_ee_to_left_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.left_ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.left_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "left_gripper_0"
+              ]
+            },
+            "states.left_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "left_joint_0",
+                "left_joint_1",
+                "left_joint_2",
+                "left_joint_3",
+                "left_joint_4",
+                "left_joint_5"
+              ]
+            },
+            "states.left_tcp_to_left_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.left_tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.right_ee_to_right_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.right_ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.right_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "right_gripper_0"
+              ]
+            },
+            "states.right_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "right_joint_0",
+                "right_joint_1",
+                "right_joint_2",
+                "right_joint_3",
+                "right_joint_4",
+                "right_joint_5"
+              ]
+            },
+            "states.right_tcp_to_right_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.right_tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.robot_to_env_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            }
+          },
+          "subdatasets": 702,
+          "sample_info_files": [
+            "articulation_tasks/lift2/close_the_microwave_left_arm_part1/meta/info.json",
+            "articulation_tasks/lift2/close_the_microwave_left_arm_part2/meta/info.json",
+            "articulation_tasks/lift2/close_the_microwave_right_arm_part1/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "actions.left_ee_to_left_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.left_ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.left_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "left_gripper_0"
+              ]
+            },
+            "actions.left_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "left_joint_0",
+                "left_joint_1",
+                "left_joint_2",
+                "left_joint_3",
+                "left_joint_4",
+                "left_joint_5",
+                "left_joint_6"
+              ]
+            },
+            "actions.left_tcp_to_left_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.left_tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.right_ee_to_right_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.right_ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.right_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "right_gripper_0"
+              ]
+            },
+            "actions.right_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "right_joint_0",
+                "right_joint_1",
+                "right_joint_2",
+                "right_joint_3",
+                "right_joint_4",
+                "right_joint_5",
+                "right_joint_6"
+              ]
+            },
+            "actions.right_tcp_to_right_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "actions.right_tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "hand_left_camera_intrinsics": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": [
+                "fx",
+                "fy",
+                "cx",
+                "cy"
+              ]
+            },
+            "hand_left_camera_to_robot_extrinsics": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "hand_right_camera_intrinsics": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": [
+                "fx",
+                "fy",
+                "cx",
+                "cy"
+              ]
+            },
+            "hand_right_camera_to_robot_extrinsics": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "head_camera_intrinsics": {
+              "dtype": "float32",
+              "shape": [
+                4
+              ],
+              "names": [
+                "fx",
+                "fy",
+                "cx",
+                "cy"
+              ]
+            },
+            "head_camera_to_robot_extrinsics": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "master_actions.left_gripper.openness": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "left_gripper_0"
+              ]
+            },
+            "master_actions.left_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "left_gripper_0"
+              ]
+            },
+            "master_actions.left_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "left_joint_0",
+                "left_joint_1",
+                "left_joint_2",
+                "left_joint_3",
+                "left_joint_4",
+                "left_joint_5",
+                "left_joint_6"
+              ]
+            },
+            "master_actions.right_gripper.openness": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "right_gripper_0"
+              ]
+            },
+            "master_actions.right_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "right_gripper_0"
+              ]
+            },
+            "master_actions.right_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "right_joint_0",
+                "right_joint_1",
+                "right_joint_2",
+                "right_joint_3",
+                "right_joint_4",
+                "right_joint_5",
+                "right_joint_6"
+              ]
+            },
+            "states.left_ee_to_left_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.left_ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.left_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "left_gripper_0"
+              ]
+            },
+            "states.left_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "left_joint_0",
+                "left_joint_1",
+                "left_joint_2",
+                "left_joint_3",
+                "left_joint_4",
+                "left_joint_5",
+                "left_joint_6"
+              ]
+            },
+            "states.left_tcp_to_left_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.left_tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.right_ee_to_right_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.right_ee_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.right_gripper.position": {
+              "dtype": "float32",
+              "shape": [
+                1
+              ],
+              "names": [
+                "right_gripper_0"
+              ]
+            },
+            "states.right_joint.position": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "right_joint_0",
+                "right_joint_1",
+                "right_joint_2",
+                "right_joint_3",
+                "right_joint_4",
+                "right_joint_5",
+                "right_joint_6"
+              ]
+            },
+            "states.right_tcp_to_right_armbase_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.right_tcp_to_robot_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            },
+            "states.robot_to_env_pose": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "position.x",
+                "position.y",
+                "position.z",
+                "quaternion.w",
+                "quaternion.x",
+                "quaternion.y",
+                "quaternion.z"
+              ]
+            }
+          },
+          "subdatasets": 521,
+          "sample_info_files": [
+            "basic_tasks/genie1/genie1/scan_qrcode_part1/meta/info.json",
+            "basic_tasks/genie1/genie1/scan_qrcode_part2/meta/info.json",
+            "basic_tasks/genie1/home/internvla/InternData-A1-realese/v2.0-stable/InternData-A1/sim/basic_tasks/genie1/scan_qrcode_part1/meta/info.json"
+          ]
+        }
+      ],
+      "normalization_key_variants": [
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "actions.ee_to_armbase_pose",
+            "actions.ee_to_robot_pose",
+            "actions.gripper.openness",
+            "actions.gripper.pose",
+            "actions.gripper.position",
+            "actions.joint.position",
+            "actions.tcp_to_armbase_pose",
+            "actions.tcp_to_robot_pose",
+            "episode_index",
+            "frame_index",
+            "hand_camera_intrinsics",
+            "hand_camera_to_robot_extrinsics",
+            "head_camera_intrinsics",
+            "head_camera_to_robot_extrinsics",
+            "images.rgb.hand",
+            "images.rgb.head",
+            "index",
+            "master_actions.gripper.openness",
+            "master_actions.gripper.pose",
+            "master_actions.gripper.position",
+            "master_actions.joint.position",
+            "states.ee_to_armbase_pose",
+            "states.ee_to_robot_pose",
+            "states.gripper.pose",
+            "states.gripper.position",
+            "states.joint.position",
+            "states.robot_to_env_pose",
+            "states.tcp_to_armbase_pose",
+            "states.tcp_to_robot_pose",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 263,
+          "sample_info_files": [
+            "articulation_tasks/franka/close_the_electriccooker/meta/info.json",
+            "articulation_tasks/franka/close_the_microwave_part1/meta/info.json",
+            "articulation_tasks/franka/close_the_microwave_part2/meta/info.json"
+          ]
+        },
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "actions.left_ee_to_left_armbase_pose",
+            "actions.left_ee_to_robot_pose",
+            "actions.left_gripper.position",
+            "actions.left_joint.position",
+            "actions.left_tcp_to_left_armbase_pose",
+            "actions.left_tcp_to_robot_pose",
+            "actions.right_ee_to_right_armbase_pose",
+            "actions.right_ee_to_robot_pose",
+            "actions.right_gripper.position",
+            "actions.right_joint.position",
+            "actions.right_tcp_to_right_armbase_pose",
+            "actions.right_tcp_to_robot_pose",
+            "episode_index",
+            "frame_index",
+            "hand_left_camera_intrinsics",
+            "hand_left_camera_to_robot_extrinsics",
+            "hand_right_camera_intrinsics",
+            "hand_right_camera_to_robot_extrinsics",
+            "head_camera_intrinsics",
+            "head_camera_to_robot_extrinsics",
+            "images.rgb.hand_left",
+            "images.rgb.hand_right",
+            "images.rgb.head",
+            "index",
+            "master_actions.left_gripper.openness",
+            "master_actions.left_gripper.position",
+            "master_actions.left_joint.position",
+            "master_actions.right_gripper.openness",
+            "master_actions.right_gripper.position",
+            "master_actions.right_joint.position",
+            "states.left_ee_to_left_armbase_pose",
+            "states.left_ee_to_robot_pose",
+            "states.left_gripper.position",
+            "states.left_joint.position",
+            "states.left_tcp_to_left_armbase_pose",
+            "states.left_tcp_to_robot_pose",
+            "states.right_ee_to_right_armbase_pose",
+            "states.right_ee_to_robot_pose",
+            "states.right_gripper.position",
+            "states.right_joint.position",
+            "states.right_tcp_to_right_armbase_pose",
+            "states.right_tcp_to_robot_pose",
+            "states.robot_to_env_pose",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 1221,
+          "sample_info_files": [
+            "articulation_tasks/lift2/close_the_microwave_left_arm_part1/meta/info.json",
+            "articulation_tasks/lift2/close_the_microwave_left_arm_part2/meta/info.json",
+            "articulation_tasks/lift2/close_the_microwave_right_arm_part1/meta/info.json"
+          ]
+        },
+        {
+          "source": "missing",
+          "keys": [],
+          "subdatasets": 3,
+          "sample_info_files": [
+            "long_horizon_tasks/lift2/handover_objects_right_left_part8/meta/info.json",
+            "pick_and_place_tasks/franka/multiple_pick_and_place_part2/basket/meta/info.json",
+            "pick_and_place_tasks/split_aloha/single_pick_right_arm/omniobject3d-pitaya/meta/info.json"
+          ]
+        }
+      ],
+      "supported_control_schema_count": 1484,
+      "unsupported_control_schema_count": 0,
+      "sample_unsupported_control_schema": [],
+      "invalid_info_files": [
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/long_horizon_tasks/lift2/handover_objects_right_left_part8/meta/info.json",
+          "error": "Missing normalization metadata for /home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/long_horizon_tasks/lift2/handover_objects_right_left_part8; expected either /home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/long_horizon_tasks/lift2/handover_objects_right_left_part8/meta/stats.json or /home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/long_horizon_tasks/lift2/handover_objects_right_left_part8/meta/episodes_stats.jsonl"
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/franka/multiple_pick_and_place_part2/basket/meta/info.json",
+          "error": "Missing normalization metadata for /home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/franka/multiple_pick_and_place_part2/basket; expected either /home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/franka/multiple_pick_and_place_part2/basket/meta/stats.json or /home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/franka/multiple_pick_and_place_part2/basket/meta/episodes_stats.jsonl"
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/split_aloha/single_pick_right_arm/omniobject3d-pitaya/meta/info.json",
+          "error": "Missing normalization metadata for /home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/split_aloha/single_pick_right_arm/omniobject3d-pitaya; expected either /home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/split_aloha/single_pick_right_arm/omniobject3d-pitaya/meta/stats.json or /home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/split_aloha/single_pick_right_arm/omniobject3d-pitaya/meta/episodes_stats.jsonl"
+        }
+      ],
+      "unsupported_version_count": 0,
+      "sample_unsupported_versions": [],
+      "missing_video_feature_count": 0,
+      "sample_missing_video_features": [],
+      "missing_task_metadata_count": 3,
+      "sample_missing_task_metadata": [
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/long_horizon_tasks/lift2/handover_objects_right_left_part8/meta",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/franka/multiple_pick_and_place_part2/basket/meta",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated/pick_and_place_tasks/split_aloha/single_pick_right_arm/omniobject3d-pitaya/meta"
+      ],
+      "oversized_control_schema_count": 0,
+      "sample_oversized_control_schemas": [],
+      "robot_types": {
+        "franka": 263,
+        "ARX_Lift-2": 383,
+        "AgileX_Split_Aloha": 317,
+        "AgiBot_Genie-1": 521
+      },
+      "camera_keys": {
+        "images.rgb.hand": 264,
+        "images.rgb.hand_compress": 240,
+        "images.rgb.head": 1487,
+        "images.rgb.head_compress": 1437,
+        "images.rgb.hand_left": 1223,
+        "images.rgb.hand_left_compress": 1197,
+        "images.rgb.hand_right": 1223,
+        "images.rgb.hand_right_compress": 1197
+      },
+      "fps_values": {
+        "30": 1487
+      },
+      "licenses": {
+        "unspecified": 1487
+      },
+      "configured_training_root": "/opt/huawei/dataset/d_data_wulan/datasets/InternData-A1/sim_updated",
+      "storage_audit_root": "/home/ma-user/work/dataset/d_data_wulan/datasets/InternData-A1/sim_updated",
+      "sample_top_level_entries": [
+        {
+          "name": "articulation_tasks",
+          "kind": "directory"
+        },
+        {
+          "name": "basic_tasks",
+          "kind": "directory"
+        },
+        {
+          "name": "long_horizon_tasks",
+          "kind": "directory"
+        },
+        {
+          "name": "pick_and_place_tasks",
+          "kind": "directory"
+        }
+      ]
+    },
+    {
+      "name": "robomind",
+      "root": "/home/ma-user/work/dataset/data_w/processed/RoboMind",
+      "root_exists": true,
+      "lerobot_v21_subdatasets": 13,
+      "sample_info_files": [
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_agilex_3rgb/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_franka_1rgb/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_franka_3rgb/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_tienkung_gello_1rgb/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_tienkung_xsens_1rgb/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_ur_1rgb/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_agilex_3rgb/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_franka_3rgb/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_franka_fr3_dual/meta/info.json",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_tienkung_gello_1rgb/meta/info.json"
+      ],
+      "codebase_versions": {
+        "v2.1": 13
+      },
+      "normalization_sources": {
+        "stats.json": 0,
+        "episodes_stats.jsonl": 0,
+        "missing": 13
+      },
+      "sample_missing_normalization": [
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_agilex_3rgb/meta",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_franka_1rgb/meta",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_franka_3rgb/meta",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_tienkung_gello_1rgb/meta",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_tienkung_xsens_1rgb/meta",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_ur_1rgb/meta",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_agilex_3rgb/meta",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_franka_3rgb/meta",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_franka_fr3_dual/meta",
+        "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_tienkung_gello_1rgb/meta"
+      ],
+      "control_schema_variants": [],
+      "control_manifest_variants": [
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "action"
+              ]
+            },
+            "actions": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "actions"
+              ]
+            },
+            "eef_pose": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "eef_pose"
+              ]
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "observation.state"
+              ]
+            },
+            "q_vel": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "q_vel"
+              ]
+            }
+          },
+          "subdatasets": 2,
+          "sample_info_files": [
+            "benchmark1_0/h5_agilex_3rgb/meta/info.json",
+            "benchmark1_1/h5_agilex_3rgb/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": [
+                "action"
+              ]
+            },
+            "actions": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": [
+                "actions"
+              ]
+            },
+            "eef_pose": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "eef_pose"
+              ]
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                8
+              ],
+              "names": [
+                "observation.state"
+              ]
+            }
+          },
+          "subdatasets": 4,
+          "sample_info_files": [
+            "benchmark1_0/h5_franka_1rgb/meta/info.json",
+            "benchmark1_0/h5_franka_3rgb/meta/info.json",
+            "benchmark1_1/h5_franka_3rgb/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                16
+              ],
+              "names": [
+                "action"
+              ]
+            },
+            "actions": {
+              "dtype": "float32",
+              "shape": [
+                16
+              ],
+              "names": [
+                "actions"
+              ]
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                16
+              ],
+              "names": [
+                "observation.state"
+              ]
+            }
+          },
+          "subdatasets": 2,
+          "sample_info_files": [
+            "benchmark1_0/h5_tienkung_gello_1rgb/meta/info.json",
+            "benchmark1_1/h5_tienkung_gello_1rgb/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "action"
+              ]
+            },
+            "actions": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "actions"
+              ]
+            },
+            "eef_pose": {
+              "dtype": "float32",
+              "shape": [
+                12
+              ],
+              "names": [
+                "eef_pose"
+              ]
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                "observation.state"
+              ]
+            }
+          },
+          "subdatasets": 2,
+          "sample_info_files": [
+            "benchmark1_0/h5_tienkung_xsens_1rgb/meta/info.json",
+            "benchmark1_1/h5_tienkung_xsens_1rgb/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "action"
+              ]
+            },
+            "actions": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "actions"
+              ]
+            },
+            "eef_pose": {
+              "dtype": "float32",
+              "shape": [
+                6
+              ],
+              "names": [
+                "eef_pose"
+              ]
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                7
+              ],
+              "names": [
+                "observation.state"
+              ]
+            }
+          },
+          "subdatasets": 2,
+          "sample_info_files": [
+            "benchmark1_0/h5_ur_1rgb/meta/info.json",
+            "benchmark1_1/h5_ur_1rgb/meta/info.json"
+          ]
+        },
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                16
+              ],
+              "names": [
+                "action"
+              ]
+            },
+            "actions": {
+              "dtype": "float32",
+              "shape": [
+                16
+              ],
+              "names": [
+                "actions"
+              ]
+            },
+            "eef_pose": {
+              "dtype": "float32",
+              "shape": [
+                12
+              ],
+              "names": [
+                "eef_pose"
+              ]
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                16
+              ],
+              "names": [
+                "observation.state"
+              ]
+            }
+          },
+          "subdatasets": 1,
+          "sample_info_files": [
+            "benchmark1_1/h5_franka_fr3_dual/meta/info.json"
+          ]
+        }
+      ],
+      "normalization_key_variants": [
+        {
+          "source": "missing",
+          "keys": [],
+          "subdatasets": 13,
+          "sample_info_files": [
+            "benchmark1_0/h5_agilex_3rgb/meta/info.json",
+            "benchmark1_0/h5_franka_1rgb/meta/info.json",
+            "benchmark1_0/h5_franka_3rgb/meta/info.json"
+          ]
+        }
+      ],
+      "supported_control_schema_count": 0,
+      "unsupported_control_schema_count": 13,
+      "sample_unsupported_control_schema": [
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_agilex_3rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "eef_pose",
+            "episode_index",
+            "frame_index",
+            "image_front",
+            "image_left_wrist",
+            "image_right_wrist",
+            "index",
+            "language_raw",
+            "observation.state",
+            "q_vel",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_front",
+            "image_left_wrist",
+            "image_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_franka_1rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "eef_pose",
+            "episode_index",
+            "frame_index",
+            "image_top",
+            "index",
+            "language_raw",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_top"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_franka_3rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "eef_pose",
+            "episode_index",
+            "frame_index",
+            "image_left",
+            "image_right",
+            "index",
+            "language_raw",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_left",
+            "image_right"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_tienkung_gello_1rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "episode_index",
+            "frame_index",
+            "image_top",
+            "index",
+            "language_raw",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_top"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_tienkung_xsens_1rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "eef_pose",
+            "episode_index",
+            "frame_index",
+            "image_top",
+            "index",
+            "language_raw",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_top"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_0/h5_ur_1rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "eef_pose",
+            "episode_index",
+            "frame_index",
+            "image_top",
+            "index",
+            "language_raw",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_top"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_agilex_3rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "eef_pose",
+            "episode_index",
+            "frame_index",
+            "image_front",
+            "image_left_wrist",
+            "image_right_wrist",
+            "index",
+            "language_raw",
+            "observation.state",
+            "q_vel",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_front",
+            "image_left_wrist",
+            "image_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_franka_3rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "eef_pose",
+            "episode_index",
+            "frame_index",
+            "image_left",
+            "image_right",
+            "index",
+            "language_raw",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_left",
+            "image_right"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_franka_fr3_dual/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "eef_pose",
+            "episode_index",
+            "frame_index",
+            "image_front",
+            "image_left",
+            "image_right",
+            "image_top",
+            "index",
+            "language_raw",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_front",
+            "image_left",
+            "image_right",
+            "image_top"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/data_w/processed/RoboMind/benchmark1_1/h5_tienkung_gello_1rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "actions",
+            "episode_index",
+            "frame_index",
+            "image_top",
+            "index",
+            "language_raw",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "image_top"
+          ]
+        }
+      ],
+      "invalid_info_files": [],
+      "unsupported_version_count": 0,
+      "sample_unsupported_versions": [],
+      "missing_video_feature_count": 0,
+      "sample_missing_video_features": [],
+      "missing_task_metadata_count": 0,
+      "sample_missing_task_metadata": [],
+      "oversized_control_schema_count": 0,
+      "sample_oversized_control_schemas": [],
+      "robot_types": {},
+      "camera_keys": {
+        "image_front": 3,
+        "image_left_wrist": 2,
+        "image_right_wrist": 2,
+        "image_top": 8,
+        "image_left": 4,
+        "image_right": 4
+      },
+      "fps_values": {
+        "30": 13
+      },
+      "licenses": {
+        "unspecified": 13
+      },
+      "configured_training_root": "/opt/huawei/dataset/data_w/processed/RoboMind",
+      "storage_audit_root": "/home/ma-user/work/dataset/data_w/processed/RoboMind",
+      "sample_top_level_entries": [
+        {
+          "name": ".ipynb_checkpoints",
+          "kind": "directory"
+        },
+        {
+          "name": "benchmark1_0",
+          "kind": "directory"
+        },
+        {
+          "name": "benchmark1_1",
+          "kind": "directory"
+        },
+        {
+          "name": "benchmark1_2",
+          "kind": "directory"
+        }
+      ]
+    },
+    {
+      "name": "robotwin",
+      "root": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized",
+      "root_exists": true,
+      "lerobot_v21_subdatasets": 100,
+      "sample_info_files": [
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/adjust_bottle/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/beat_block_hammer/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/blocks_ranking_rgb/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/blocks_ranking_size/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/click_alarmclock/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/click_bell/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/dump_bin_bigbin/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/grab_roller/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/handover_block/meta/info.json",
+        "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/handover_mic/meta/info.json"
+      ],
+      "codebase_versions": {
+        "v2.1": 100
+      },
+      "normalization_sources": {
+        "stats.json": 0,
+        "episodes_stats.jsonl": 100,
+        "missing": 0
+      },
+      "sample_missing_normalization": [],
+      "control_schema_variants": [],
+      "control_manifest_variants": [
+        {
+          "feature_specs": {
+            "action": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                [
+                  "left_waist",
+                  "left_shoulder",
+                  "left_elbow",
+                  "left_forearm_roll",
+                  "left_wrist_angle",
+                  "left_wrist_rotate",
+                  "left_gripper",
+                  "right_waist",
+                  "right_shoulder",
+                  "right_elbow",
+                  "right_forearm_roll",
+                  "right_wrist_angle",
+                  "right_wrist_rotate",
+                  "right_gripper"
+                ]
+              ]
+            },
+            "observation.state": {
+              "dtype": "float32",
+              "shape": [
+                14
+              ],
+              "names": [
+                [
+                  "left_waist",
+                  "left_shoulder",
+                  "left_elbow",
+                  "left_forearm_roll",
+                  "left_wrist_angle",
+                  "left_wrist_rotate",
+                  "left_gripper",
+                  "right_waist",
+                  "right_shoulder",
+                  "right_elbow",
+                  "right_forearm_roll",
+                  "right_wrist_angle",
+                  "right_wrist_rotate",
+                  "right_gripper"
+                ]
+              ]
+            }
+          },
+          "subdatasets": 100,
+          "sample_info_files": [
+            "Clean/adjust_bottle/meta/info.json",
+            "Clean/beat_block_hammer/meta/info.json",
+            "Clean/blocks_ranking_rgb/meta/info.json"
+          ]
+        }
+      ],
+      "normalization_key_variants": [
+        {
+          "source": "episodes_stats.jsonl",
+          "keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "subdatasets": 100,
+          "sample_info_files": [
+            "Clean/adjust_bottle/meta/info.json",
+            "Clean/beat_block_hammer/meta/info.json",
+            "Clean/blocks_ranking_rgb/meta/info.json"
+          ]
+        }
+      ],
+      "supported_control_schema_count": 0,
+      "unsupported_control_schema_count": 100,
+      "sample_unsupported_control_schema": [
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/adjust_bottle/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/beat_block_hammer/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/blocks_ranking_rgb/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/blocks_ranking_size/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/click_alarmclock/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/click_bell/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/dump_bin_bigbin/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/grab_roller/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/handover_block/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        },
+        {
+          "path": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Clean/handover_mic/meta/info.json",
+          "feature_keys": [
+            "action",
+            "episode_index",
+            "frame_index",
+            "index",
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist",
+            "observation.state",
+            "task_index",
+            "timestamp"
+          ],
+          "video_keys": [
+            "observation.images.cam_high",
+            "observation.images.cam_left_wrist",
+            "observation.images.cam_right_wrist"
+          ]
+        }
+      ],
+      "invalid_info_files": [],
+      "unsupported_version_count": 0,
+      "sample_unsupported_versions": [],
+      "missing_video_feature_count": 0,
+      "sample_missing_video_features": [],
+      "missing_task_metadata_count": 0,
+      "sample_missing_task_metadata": [],
+      "oversized_control_schema_count": 0,
+      "sample_oversized_control_schemas": [],
+      "robot_types": {},
+      "camera_keys": {
+        "observation.images.cam_high": 100,
+        "observation.images.cam_left_wrist": 100,
+        "observation.images.cam_right_wrist": 100
+      },
+      "fps_values": {
+        "15": 100
+      },
+      "licenses": {
+        "unspecified": 100
+      },
+      "configured_training_root": "/opt/huawei/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized",
+      "storage_audit_root": "/home/ma-user/work/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized",
+      "sample_top_level_entries": [
+        {
+          "name": ".cache",
+          "kind": "directory"
+        },
+        {
+          "name": ".gitattributes",
+          "kind": "file"
+        },
+        {
+          "name": ".ipynb_checkpoints",
+          "kind": "directory"
+        },
+        {
+          "name": "Clean",
+          "kind": "directory"
+        },
+        {
+          "name": "Randomized",
+          "kind": "directory"
+        },
+        {
+          "name": "w.py",
+          "kind": "file"
+        }
+      ]
+    }
+  ],
+  "failures": [
+    "oxe: 19 subdatasets have neither stats.json nor episodes_stats.jsonl",
+    "oxe: no supported joint/gripper control schema",
+    "oxe: 31 subdatasets use an unsupported control manifest",
+    "agibot_world: no supported joint/gripper control schema",
+    "agibot_world: 188 subdatasets use an unsupported control manifest",
+    "interndata_a1_real: no supported joint/gripper control schema",
+    "interndata_a1_real: 9 subdatasets use an unsupported control manifest",
+    "interndata_a1_sim_updated: 3 subdatasets have neither stats.json nor episodes_stats.jsonl",
+    "interndata_a1_sim_updated: 3 subdatasets have no tasks.jsonl",
+    "interndata_a1_sim_updated: 3 meta/info.json files are invalid",
+    "robomind: 13 subdatasets have neither stats.json nor episodes_stats.jsonl",
+    "robomind: no supported joint/gripper control schema",
+    "robomind: 13 subdatasets use an unsupported control manifest",
+    "robotwin: no supported joint/gripper control schema",
+    "robotwin: 100 subdatasets use an unsupported control manifest"
+  ],
+  "passed": false,
+  "report_path": "/home/ma-user/work/dataset/d_env_wulan/LaWAM/outputs/preflight/storage_manifest/storage-manifest-002.json"
+}
