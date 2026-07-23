@@ -86,6 +86,117 @@ def _select_feature_keys(features: dict[str, Any], prefix: str) -> tuple[str, ..
     return tuple(keys)
 
 
+def _feature_names(feature: dict[str, Any]) -> tuple[str, ...]:
+    names: list[str] = []
+
+    def collect(value: Any) -> None:
+        if isinstance(value, str):
+            names.append(value)
+        elif isinstance(value, dict):
+            for child in value.values():
+                collect(child)
+        elif isinstance(value, (list, tuple)):
+            for child in value:
+                collect(child)
+
+    collect(feature.get("names", ()))
+    return tuple(names)
+
+
+def _is_named_joint_vector(feature: dict[str, Any]) -> bool:
+    names = _feature_names(feature)
+    if len(names) != _feature_size(feature):
+        return False
+    joint_tokens = (
+        "joint",
+        "motor",
+        "waist",
+        "shoulder",
+        "elbow",
+        "forearm",
+        "wrist",
+        "gripper",
+    )
+    return all(
+        any(token in name.lower() for token in joint_tokens)
+        for name in names
+    )
+
+
+def _select_control_feature_keys(
+    features: dict[str, Any],
+) -> tuple[tuple[str, ...], tuple[str, ...], str | None]:
+    """Select only schemas whose control semantics are explicit in metadata."""
+    action_keys = _select_feature_keys(features, "actions.")
+    state_keys = _select_feature_keys(features, "states.")
+    if action_keys and state_keys:
+        return action_keys, state_keys, "joint_gripper"
+
+    namespaced_action_keys = tuple(
+        key
+        for key in ("actions.effector.position", "actions.joint.position")
+        if key in features
+    )
+    namespaced_state_keys = tuple(
+        key
+        for key in (
+            "observation.states.effector.position",
+            "observation.states.joint.position",
+        )
+        if key in features
+    )
+    effector_names = _feature_names(features.get("actions.effector.position", {}))
+    state_effector_names = _feature_names(
+        features.get("observation.states.effector.position", {})
+    )
+    if (
+        len(namespaced_action_keys) == 2
+        and len(namespaced_state_keys) == 2
+        and effector_names
+        and state_effector_names
+        and all("gripper" in name.lower() for name in effector_names)
+        and all("gripper" in name.lower() for name in state_effector_names)
+    ):
+        return (
+            namespaced_action_keys,
+            namespaced_state_keys,
+            "namespaced_joint_gripper",
+        )
+
+    if (
+        "action" in features
+        and "observation.state" in features
+        and _is_named_joint_vector(features["action"])
+        and _is_named_joint_vector(features["observation.state"])
+    ):
+        return ("action",), ("observation.state",), "named_joint_vector"
+
+    return (), (), None
+
+
+def _gripper_ranges(
+    features: dict[str, Any],
+    action_keys: tuple[str, ...],
+) -> tuple[tuple[int, int], ...]:
+    result: list[tuple[int, int]] = []
+    cursor = 0
+    for key in action_keys:
+        size = _feature_size(features[key])
+        names = _feature_names(features[key])
+        if "gripper" in key or (
+            names and all("gripper" in name.lower() for name in names)
+        ):
+            result.append((cursor, cursor + size))
+        elif len(names) == size:
+            result.extend(
+                (cursor + index, cursor + index + 1)
+                for index, name in enumerate(names)
+                if "gripper" in name.lower()
+            )
+        cursor += size
+    return tuple(result)
+
+
 def _parse_norms(stats: dict[str, Any], keys: tuple[str, ...]) -> dict[str, FeatureNorm]:
     result: dict[str, FeatureNorm] = {}
     for key in keys:
@@ -294,9 +405,10 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
                 continue
             root = info_path.parent.parent
             features = info.get("features", {})
-            action_keys = _select_feature_keys(features, "actions.")
-            state_keys = _select_feature_keys(features, "states.")
-            if not action_keys or not state_keys:
+            action_keys, state_keys, adapter_name = _select_control_feature_keys(
+                features
+            )
+            if not action_keys or not state_keys or adapter_name is None:
                 if self.config.data.strict_manifest:
                     raise ValueError(
                         f"Unsupported control manifest in {info_path}: "
@@ -329,12 +441,18 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
                     )
             robot_type = str(info.get("robot_type", root.parent.name))
             schema_name = f"{robot_type}:{'|'.join(action_keys)}"
-            cursor, gripper_ranges = 0, []
+            if adapter_name != "joint_gripper":
+                action_signature = "|".join(
+                    f"{key}[{_feature_size(features[key])}]" for key in action_keys
+                )
+                state_signature = "|".join(
+                    f"{key}[{_feature_size(features[key])}]" for key in state_keys
+                )
+                schema_name = (
+                    f"{adapter_name}:{robot_type}:"
+                    f"actions={action_signature}:states={state_signature}"
+                )
             action_sizes = tuple(_feature_size(features[key]) for key in action_keys)
-            for key, size in zip(action_keys, action_sizes):
-                if "gripper" in key:
-                    gripper_ranges.append((cursor, cursor + size))
-                cursor += size
             schema = ActionSchema(
                 name=schema_name,
                 robot_type=robot_type,
@@ -342,7 +460,7 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
                 state_keys=state_keys,
                 action_sizes=action_sizes,
                 state_sizes=tuple(_feature_size(features[key]) for key in state_keys),
-                gripper_ranges=tuple(gripper_ranges),
+                gripper_ranges=_gripper_ranges(features, action_keys),
                 action_norms=action_norms,
                 state_norms=state_norms,
             )

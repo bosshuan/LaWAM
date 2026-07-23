@@ -12,20 +12,27 @@ data:
     - /opt/huawei/dataset/d_data_wulan/datasets/InternData-A1/real
     - /opt/huawei/dataset/d_data_wulan/datasets/InternData-A1/sim_updated
     - /opt/huawei/dataset/data_w/processed/RoboMind
-    - /opt/huawei/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized
+    - /opt/huawei/dataset/d_data_wulan/datasets/StarVLA/RoboTwin-Randomized/Randomized
   source_names:
     - oxe
     - agibot_world
     - interndata_a1_real
     - interndata_a1_sim_updated
     - robomind
-    - robotwin
-  # The five datasets are equally weighted for the engineering pilot. The two
-  # InternData roots split its one-dataset share equally; sim is not used.
+    - robotwin_randomized
+  # The five active datasets are equally weighted for the engineering pilot.
+  # The two InternData roots split its one-dataset share equally; top-level sim
+  # is not used. RoboMind remains strict until state_gr00t metadata is audited.
   # Replace these explicit weights after manifest review.
   mixture_weights: [1.0, 1.0, 0.5, 0.5, 1.0, 1.0]
   mixture_epoch_samples: 3200
   strict_manifest: true
+  exclude_contains:
+    - real_lerobotv30
+    - sim_updated_lerobotv30
+    - long_horizon_tasks/lift2/handover_objects_right_left_part8
+    - pick_and_place_tasks/franka/multiple_pick_and_place_part2/basket
+    - pick_and_place_tasks/split_aloha/single_pick_right_arm/omniobject3d-pitaya
   sample_stride: 10
   max_subdatasets: null
   max_episodes_per_subdataset: null

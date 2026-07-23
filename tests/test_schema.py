@@ -1,6 +1,9 @@
 import numpy as np
 
-from latent_wam.data.intern_data_a1 import _aggregate_episode_norms
+from latent_wam.data.intern_data_a1 import (
+    _aggregate_episode_norms,
+    _select_control_feature_keys,
+)
 from latent_wam.data.schema import ActionSchema, ActionSchemaAdapter, FeatureNorm
 
 
@@ -92,3 +95,95 @@ def test_aggregate_lerobot_v21_episode_statistics_by_frame_count():
     )
     assert np.allclose(norm.mean, expected_frames.mean(axis=0))
     assert np.allclose(norm.std, expected_frames.std(axis=0))
+
+
+def test_selects_namespaced_joint_gripper_schema():
+    features = {
+        "actions.effector.position": {
+            "dtype": "float32",
+            "shape": [2],
+            "names": ["left_gripper", "right_gripper"],
+        },
+        "actions.joint.position": {
+            "dtype": "float32",
+            "shape": [14],
+            "names": [f"joint_{index}" for index in range(14)],
+        },
+        "observation.states.effector.position": {
+            "dtype": "float32",
+            "shape": [2],
+            "names": ["left_gripper", "right_gripper"],
+        },
+        "observation.states.joint.position": {
+            "dtype": "float32",
+            "shape": [14],
+            "names": [f"joint_{index}" for index in range(14)],
+        },
+    }
+    action_keys, state_keys, adapter = _select_control_feature_keys(features)
+    assert action_keys == (
+        "actions.effector.position",
+        "actions.joint.position",
+    )
+    assert state_keys == (
+        "observation.states.effector.position",
+        "observation.states.joint.position",
+    )
+    assert adapter == "namespaced_joint_gripper"
+
+
+def test_selects_named_robotwin_joint_vector():
+    names = [
+        "left_waist",
+        "left_shoulder",
+        "left_elbow",
+        "left_forearm_roll",
+        "left_wrist_angle",
+        "left_wrist_rotate",
+        "left_gripper",
+        "right_waist",
+        "right_shoulder",
+        "right_elbow",
+        "right_forearm_roll",
+        "right_wrist_angle",
+        "right_wrist_rotate",
+        "right_gripper",
+    ]
+    features = {
+        "action": {"dtype": "float32", "shape": [14], "names": [names]},
+        "observation.state": {
+            "dtype": "float32",
+            "shape": [14],
+            "names": [names],
+        },
+    }
+    assert _select_control_feature_keys(features) == (
+        ("action",),
+        ("observation.state",),
+        "named_joint_vector",
+    )
+
+
+def test_rejects_cartesian_and_opaque_vector_schemas():
+    cartesian = {
+        "action": {
+            "dtype": "float32",
+            "shape": [7],
+            "names": ["x", "y", "z", "roll", "pitch", "yaw", "gripper"],
+        },
+        "observation.state": {
+            "dtype": "float32",
+            "shape": [7],
+            "names": ["x", "y", "z", "roll", "pitch", "yaw", "gripper"],
+        },
+    }
+    opaque = {
+        "action": {"dtype": "float32", "shape": [14], "names": ["action"]},
+        "observation.state": {
+            "dtype": "float32",
+            "shape": [14],
+            "names": ["observation.state"],
+        },
+    }
+    assert _select_control_feature_keys(cartesian) == ((), (), None)
+    assert _select_control_feature_keys(opaque) == ((), (), None)

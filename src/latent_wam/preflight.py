@@ -12,7 +12,7 @@ from latent_wam.config import load_config, resolve_output_root
 from latent_wam.data.intern_data_a1 import (
     _feature_size,
     _load_norms,
-    _select_feature_keys,
+    _select_control_feature_keys,
 )
 
 
@@ -116,6 +116,50 @@ def inspect_normalization_keys(meta: Path) -> tuple[str, list[str]]:
     return "missing", []
 
 
+def audit_json_sidecars(
+    root: Path,
+    filename: str,
+    excluded: tuple[str, ...],
+) -> dict:
+    """Capture dataset-specific JSON metadata without assigning it semantics."""
+    paths = [
+        path
+        for path in sorted(root.glob(f"**/{filename}"))
+        if not any(token in str(path) for token in excluded)
+    ]
+    variants: dict[str, dict] = {}
+    invalid_files: list[dict[str, str]] = []
+    for path in paths:
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                content = json.load(handle)
+            signature = json.dumps(content, sort_keys=True)
+            variant = variants.setdefault(
+                signature,
+                {
+                    "content": content,
+                    "files": 0,
+                    "sample_paths": [],
+                },
+            )
+            variant["files"] += 1
+            if len(variant["sample_paths"]) < 5:
+                variant["sample_paths"].append(str(path.relative_to(root)))
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as error:
+            invalid_files.append(
+                {
+                    "path": str(path.relative_to(root)),
+                    "error": f"{type(error).__name__}: {error}",
+                }
+            )
+    return {
+        "filename": filename,
+        "file_count": len(paths),
+        "variants": list(variants.values()),
+        "invalid_files": invalid_files,
+    }
+
+
 def audit_local_t5(model_name: str, verify_weights: bool) -> tuple[dict, list[str]]:
     """Validate the exact offline T5 path used by training."""
     report = {
@@ -214,6 +258,11 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
     )
     report["lerobot_v21_subdatasets"] = len(info_files)
     report["sample_info_files"] = [str(path) for path in info_files[:10]]
+    report["state_gr00t_metadata"] = audit_json_sidecars(
+        root,
+        "state_gr00t.json",
+        config.data.exclude_contains,
+    )
     if not info_files:
         failures.append(f"{name}: no candidate meta/info.json files were found")
 
@@ -292,8 +341,9 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
             fps_values[fps] = fps_values.get(fps, 0) + 1
             license_name = str(info.get("license", "unspecified"))
             licenses[license_name] = licenses.get(license_name, 0) + 1
-            action_keys = _select_feature_keys(features, "actions.")
-            state_keys = _select_feature_keys(features, "states.")
+            action_keys, state_keys, adapter_name = _select_control_feature_keys(
+                features
+            )
             videos = sorted(
                 key
                 for key, value in features.items()
@@ -305,7 +355,7 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
                 missing_video_features.append(str(info_path))
             if not (meta / "tasks.jsonl").is_file():
                 missing_task_metadata.append(str(meta))
-            if not action_keys or not state_keys:
+            if not action_keys or not state_keys or adapter_name is None:
                 unsupported_control_schema.append(
                     {
                         "path": str(info_path),
@@ -351,10 +401,23 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
                     )
             robot_type = str(info.get("robot_type", info_path.parent.parent.name))
             robot_types[robot_type] = robot_types.get(robot_type, 0) + 1
-            variant_name = f"{robot_type}:{'|'.join(action_keys)}"
+            variant_name = json.dumps(
+                {
+                    "adapter": adapter_name,
+                    "robot_type": robot_type,
+                    "actions": [
+                        [key, _feature_size(features[key])] for key in action_keys
+                    ],
+                    "states": [
+                        [key, _feature_size(features[key])] for key in state_keys
+                    ],
+                },
+                sort_keys=True,
+            )
             variant = schema_variants.setdefault(
                 variant_name,
                 {
+                    "adapter": adapter_name,
                     "robot_type": robot_type,
                     "action_keys": list(action_keys),
                     "state_keys": list(state_keys),

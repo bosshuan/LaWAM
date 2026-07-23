@@ -66,132 +66,33 @@ is required. The final editable-install command is mandatory because this
 repository uses a `src/` package layout; without it, commands such as
 `python -m latent_wam.preflight` cannot import `latent_wam`.
 
-## 8xA100 bring-up
+## Completed 8xA100 validation
 
-Run these commands on the debug server from the repository root:
+The A100 checkpoint audit, smoke tests, strict overfit checks, deterministic
+resume audit, real T5-large smoke test, and 100-step full-`sim` Stage 1 pilot
+have already completed. Their reports and logs remain under `outputs/` as
+reproducibility evidence.
 
-```bash
-bash scripts/debug/preflight.sh --skip-checksum
-bash scripts/debug/run_checkpoint_audit.sh
-bash scripts/debug/run_tests.sh
-bash scripts/debug/run_1gpu_smoke.sh
-bash scripts/debug/run_8gpu_smoke.sh
-```
+Do not run `scripts/train_8gpu.sh` for the current training workflow. It and the
+old `configs/debug/` and `configs/train/` files are retained only to reproduce
+the completed A100 validation. They use the historical `/mnt/sfs_turbo` paths
+and the old InternData-A1 `sim` subset, not the current H800 data mixture.
 
-After the Conda environment is active, the first five bring-up checks can also be
-run sequentially with `bash scripts/debug/bringup_8gpu.sh`.
-
-After the basic smoke tests, run the strict correctness suite on one A100. It
-uses exactly one fixed anchor and constant learning rates, and independently
-checks future-only, action-only, and joint optimization:
-
-```bash
-bash scripts/debug/run_strict_overfit.sh
-```
-
-Then compare an uninterrupted six-step run against a three-step run resumed
-from checkpoint. The audit fails unless every student tensor matches exactly:
-
-```bash
-bash scripts/debug/run_resume_audit.sh
-```
-
-This audit intentionally uses a slower deterministic runtime: TF32, Flash
-SDPA, memory-efficient SDPA, and cuDNN SDPA are disabled, while deterministic
-cuBLAS and math SDPA are enabled. It first writes `pre_resume_audit.json` after
-comparing both independent runs at step 3; only when that passes does it resume
-the interrupted run and write the final `resume_audit.json` at step 6. These
-settings are scoped to the audit config and do not change scientific training.
-
-Once both checks pass, validate the real frozen T5-large path and run a short
-8xA100 T5 smoke test:
-
-```bash
-bash scripts/debug/preflight_t5_a100.sh --skip-checksum
-bash scripts/debug/run_8gpu_t5_smoke.sh
-```
-
-The T5 preflight loads the local tokenizer, validates the T5-large architecture
-(`d_model=1024`, 24 encoder layers), and loads every T5 encoder weight on CPU.
-Its JSON report is written under `outputs/preflight/`. The smoke launcher prints
-and uses one explicit `outputs/interndata_a1_8gpu_t5_smoke/<run-id>/` directory;
-the startup artifact records the actual text encoder class, width, parameter
-count, and confirms that it is frozen.
-
-After the real-T5 smoke test passes, run a 100-step Stage 1 engineering pilot
-over every usable episode in all InternData-A1 `sim` subdatasets:
-
-```bash
-bash scripts/debug/run_stage1_full_sim_pilot.sh
-```
-
-Unlike the smoke configs, this pilot has no `max_subdatasets` or
-`max_episodes_per_subdataset` limit. It uses the scientific microbatch and
-gradient accumulation settings (global batch 64 on 8 GPUs), but writes to the
-separate `outputs/interndata_a1_stage1_full_sim_pilot/<run-id>/` namespace and
-stops after 100 optimizer steps. It does not replace the later 20k-step Stage 1
-run on the final training mixture.
-
-Pass `--text-model /absolute/local/path/to/t5-large` to both T5 commands when
-the server path differs from the checked-in default.
-
-The basic smoke config deliberately uses the local hash text encoder so the training
-path can be validated without downloading T5. Scientific training uses frozen
-T5-large and `local_files_only: true`; either put `google-t5/t5-large` in the
-server Hugging Face cache or pass its local directory:
-
-```bash
-bash scripts/train_8gpu.sh --text-model /absolute/local/path/to/t5-large
-```
-
-Before the scientific run, validate the same local T5 path that training will
-use:
-
-```bash
-bash scripts/debug/preflight_full.sh --skip-checksum \
-  --text-model /absolute/local/path/to/t5-large
-```
-
-Checkpoint and data paths can likewise be overridden with `--checkpoint` and
-`--data-root`. Persistent server-only overrides may instead be placed in an
-ignored config under `configs/local/` and passed with `--config`.
-
-The default full-training command starts Stage 1, uses the configured 384
-resolution, and never silently changes the backbone or latent space after OOM:
-
-```bash
-bash scripts/train_8gpu.sh \
-  --text-model /absolute/local/path/to/t5-large
-```
-
-First reduce worker count, keep the already configured activation checkpointing,
-or increase gradient accumulation if the canonical model runs out of memory.
-
-The scientific schedule has separate configs for `stage1_future`,
-`stage2_action_warmup`, and `stage3_joint`. Initialize a new stage from the
-previous stage without importing its optimizer state:
-
-```bash
-bash scripts/train_8gpu.sh \
-  --config configs/train/stage2_action_warmup.yaml \
-  --init-student outputs/interndata_a1_stage1_future/<run>/checkpoints/final.pt \
-  --text-model /absolute/local/path/to/t5-large
-```
-
-Then initialize Stage 3 from the Stage 2 final checkpoint in the same way using
-`configs/train/stage3_joint.yaml`. Calling `scripts/train_8gpu.sh` without an
-explicit config never skips directly to joint training.
-
-Use `--resume` only when continuing the same stage and optimizer schedule.
+Current work starts with the CPU storage-manifest audit below and then uses the
+external 4x8 H800 launcher. Stage transitions will receive H800-specific
+configs only after the multi-source engineering pilot passes.
 
 ## 4x8 H800 multi-source bring-up
 
-Before allocating H800s, audit all five datasets from a CPU node that can see
-the persistent storage paths. They occupy six explicit roots because
+Before allocating H800s, audit all five candidate datasets from a CPU node that
+can see the persistent storage paths. They occupy six explicit roots because
 InternData-A1 uses `real` and `sim_updated` as separate sub-sources and excludes
-`sim`. The training config keeps its `/opt/huawei` paths; the audit maps that
-prefix to `/home/ma-user/work` without editing the YAML and reads metadata only
-(no video decoding or model-weight loading):
+top-level `sim`. RoboMind is included in manifest validation while its
+`state_gr00t.json` metadata is audited; it cannot enter training until strict
+normalization and schema checks pass. RoboTwin reads only its `Randomized`
+subdirectory. The training config keeps its `/opt/huawei` paths; the audit maps
+that prefix to `/home/ma-user/work` without editing the YAML and reads metadata
+only (no video decoding or model-weight loading):
 
 ```bash
 export LAWAM_RUN_ID=storage-manifest-001
@@ -232,9 +133,12 @@ under `outputs/preflight/h800_multisource/<run-id>/`. Review all four node
 reports before changing `LAWAM_MODE` to `pilot`.
 
 The pilot config declares OXE, AgiBot-World, InternData-A1, RoboMind, and
-RoboTwin as five equally weighted datasets across six explicit roots.
+RoboTwin Randomized as five equally weighted datasets across six explicit roots.
 InternData-A1 `real` and `sim_updated` each receive half of InternData's pilot
-weight; `sim` receives none. These weights are only for engineering validation.
+weight; the top-level `sim` root receives none. Historical `sim` content nested
+inside `sim_updated` remains valid. These weights are only for engineering
+validation. RoboMind's configured weight does not authorize training while its
+strict manifest remains unresolved.
 Sampling first selects a source and then a sample within that source, so large
 sources cannot silently dominate. The 32-GPU pilot keeps global batch 64 with
 gradient accumulation 2 and logs the observed fraction from every source.
@@ -251,7 +155,8 @@ when present; the original `sim` release is supported by frame-weighted
 aggregation of its LeRobot v2.1 `meta/episodes_stats.jsonl`. LeRobot v3.0
 directories are excluded explicitly rather than being misread as v2.1. That
 `sim` support is retained only for reproducing completed A100 bring-up checks;
-the H800 pilot and formal mixture use only `real` and `sim_updated`.
+the H800 pilot and formal mixture select only the top-level `real` and
+`sim_updated` roots. Nested historical content inside `sim_updated` is allowed.
 
 InternData-A1 is distributed separately under its own CC BY-NC-SA 4.0 terms.
 No dataset files are copied into this repository.

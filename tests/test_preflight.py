@@ -69,3 +69,46 @@ def test_strict_manifest_reports_unknown_control_fields(tmp_path):
         }
     ]
     assert any("unsupported control manifest" in failure for failure in failures)
+
+
+def test_preflight_captures_state_gr00t_without_assuming_normalization(tmp_path):
+    meta = tmp_path / "robomind" / "meta"
+    meta.mkdir(parents=True)
+    (meta / "info.json").write_text(
+        json.dumps(
+            {
+                "codebase_version": "v2.1",
+                "features": {
+                    "action": {"dtype": "float32", "shape": [7]},
+                    "observation.state": {"dtype": "float32", "shape": [7]},
+                    "image_top": {"dtype": "video", "shape": [3, 480, 640]},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (meta / "tasks.jsonl").write_text(
+        '{"task_index": 0, "task": "test"}\n',
+        encoding="utf-8",
+    )
+    state_gr00t = {
+        "action": {"mean": [0.0] * 7, "std": [1.0] * 7},
+        "observation.state": {"mean": [0.0] * 7, "std": [1.0] * 7},
+    }
+    (meta / "state_gr00t.json").write_text(
+        json.dumps(state_gr00t),
+        encoding="utf-8",
+    )
+    report, _ = audit_data_source("robomind", tmp_path, ExperimentConfig())
+    assert report["state_gr00t_metadata"] == {
+        "filename": "state_gr00t.json",
+        "file_count": 1,
+        "variants": [
+            {
+                "content": state_gr00t,
+                "files": 1,
+                "sample_paths": ["robomind/meta/state_gr00t.json"],
+            }
+        ],
+        "invalid_files": [],
+    }
