@@ -88,7 +88,7 @@ Before allocating H800s, audit all five candidate datasets from a CPU node that
 can see the persistent storage paths. They occupy six explicit roots because
 InternData-A1 uses `real` and `sim_updated` as separate sub-sources and excludes
 top-level `sim`. RoboMind is included in manifest validation while its
-`state_gr00t.json` metadata is audited; it cannot enter training until strict
+`stats_gr00t.json` metadata is audited; it cannot enter training until strict
 normalization and schema checks pass. RoboTwin reads only its `Randomized`
 subdirectory. The training config keeps its `/opt/huawei` paths; the audit maps
 that prefix to `/home/ma-user/work` without editing the YAML and reads metadata

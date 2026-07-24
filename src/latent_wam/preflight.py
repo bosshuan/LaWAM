@@ -258,9 +258,9 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
     )
     report["lerobot_v21_subdatasets"] = len(info_files)
     report["sample_info_files"] = [str(path) for path in info_files[:10]]
-    report["state_gr00t_metadata"] = audit_json_sidecars(
+    report["stats_gr00t_metadata"] = audit_json_sidecars(
         root,
-        "state_gr00t.json",
+        "stats_gr00t.json",
         config.data.exclude_contains,
     )
     if not info_files:

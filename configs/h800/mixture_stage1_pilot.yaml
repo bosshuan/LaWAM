@@ -22,7 +22,7 @@ data:
     - robotwin_randomized
   # The five active datasets are equally weighted for the engineering pilot.
   # The two InternData roots split its one-dataset share equally; top-level sim
-  # is not used. RoboMind remains strict until state_gr00t metadata is audited.
+  # is not used. RoboMind remains strict until stats_gr00t metadata is audited.
   # Replace these explicit weights after manifest review.
   mixture_weights: [1.0, 1.0, 0.5, 0.5, 1.0, 1.0]
   mixture_epoch_samples: 3200
