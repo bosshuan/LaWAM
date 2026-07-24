@@ -135,8 +135,8 @@ Its server defaults are the actual shared checkout and offline model paths:
 export LAWAM_REPO_ROOT=/opt/huawei/dataset/d_env_wulan/LaWAM
 export LAWAM_CHECKPOINT=/opt/huawei/dataset/d_env_wulan/vjepa2/checkpoints/vjepa2_1_vitG_384.pt
 export LAWAM_TEXT_MODEL=/opt/huawei/dataset/d_env_wulan/text/t5-large
-export LAWAM_RUN_ID=manifest-001
-export LAWAM_MODE=preflight
+export LAWAM_RUN_ID=h800-stage1-pilot-001
+export LAWAM_MODE=preflight_pilot
 bash /opt/huawei/dataset/d_env_wulan/LaWAM/scripts/h800/launch_4node.sh
 ```
 
@@ -146,10 +146,27 @@ persistent-storage prefix is `/home/ma-user/work`; only CPU/read-only jobs
 should use that view. Training jobs must continue to use `/opt/huawei`.
 
 The scheduler should use this as its external job script; do not launch the
-four-node job manually from an interactive terminal. Preflight runs once on
-each node and writes both hardware/data/T5 and strict V-JEPA checkpoint reports
-under `outputs/preflight/h800_multisource/<run-id>/`. Review all four node
-reports before changing `LAWAM_MODE` to `pilot`.
+four-node job manually from an interactive terminal. The recommended
+`preflight_pilot` mode completes the checks and the 50-step training pilot in
+one scheduler allocation:
+
+1. each node strict-loads the V-JEPA checkpoint and verifies all eight H800s and
+   the complete offline T5-large weights;
+2. the passed `storage-manifest-006.json` is configuration-matched and reused
+   instead of rebuilding multi-megabyte sidecar reports, while every
+   `/opt/huawei` training root is checked on the H800 node;
+3. each node reads Parquet and decodes one real training clip from every source
+   using small bounded probes;
+4. nodes publish shared ready/failure markers and start 32-GPU `torchrun` only
+   after all four are ready.
+
+Use a new `LAWAM_RUN_ID` for every combined attempt so stale markers cannot be
+mistaken for the current job. Compact hardware/T5 reports, checkpoint reports,
+data-probe reports, and status markers are written under
+`outputs/preflight/h800_multisource/<run-id>/`. If any node fails, no training
+is started. `LAWAM_MODE=preflight` remains available for a checks-only job and
+`LAWAM_MODE=pilot` intentionally skips the gate for an explicitly reviewed
+retry.
 
 The pilot config declares OXE, AgiBot-World, InternData-A1, RoboMind, and
 RoboTwin Randomized as five equally weighted datasets across six explicit roots.

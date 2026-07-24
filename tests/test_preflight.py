@@ -7,6 +7,7 @@ import pytest
 from latent_wam.config import ExperimentConfig
 from latent_wam.preflight import (
     audit_data_source,
+    audit_from_storage_manifest,
     audit_jsonl_first_records,
     json_default,
 )
@@ -26,6 +27,96 @@ def test_preflight_report_serializes_transformers_sets():
 def test_preflight_json_default_rejects_unknown_objects():
     with pytest.raises(TypeError, match="not JSON serializable"):
         json_default(object())
+
+
+def _trusted_manifest(config, roots):
+    return {
+        "audit_kind": "cpu_storage_manifest",
+        "passed": True,
+        "failures": [],
+        "config": {
+            "data": dataclasses.asdict(config.data),
+            "action": dataclasses.asdict(config.action),
+        },
+        "data_sources": [
+            {
+                "name": name,
+                "configured_training_root": str(root),
+                "lerobot_v21_subdatasets": 2,
+                "supported_control_schema_count": 2,
+                "unsupported_control_schema_count": 0,
+                "unsupported_version_count": 0,
+                "missing_video_feature_count": 0,
+                "missing_task_metadata_count": 0,
+                "oversized_control_schema_count": 0,
+                "invalid_info_files": [],
+                "normalization_sources": {
+                    "stats.json": 2,
+                    "episodes_stats.jsonl": 0,
+                    "stats_gr00t.json": 0,
+                    "missing": 0,
+                },
+                "fps_values": {"30": 2},
+                "robot_types": {"test": 2},
+                "control_schema_variants": [],
+            }
+            for name, root in zip(config.data.source_names, roots)
+        ],
+    }
+
+
+def test_preflight_reuses_matching_passed_storage_manifest(tmp_path):
+    roots = (tmp_path / "one", tmp_path / "two")
+    for root in roots:
+        root.mkdir()
+    base = ExperimentConfig()
+    config = dataclasses.replace(
+        base,
+        data=dataclasses.replace(
+            base.data,
+            roots=tuple(str(root) for root in roots),
+            source_names=("one", "two"),
+            mixture_weights=(1.0, 1.0),
+            strict_manifest=True,
+        ),
+    )
+    manifest_path = tmp_path / "storage-manifest.json"
+    manifest_path.write_text(
+        json.dumps(_trusted_manifest(config, roots)),
+        encoding="utf-8",
+    )
+    reports, manifest_info, failures = audit_from_storage_manifest(
+        manifest_path,
+        config,
+    )
+    assert failures == []
+    assert manifest_info["passed"] is True
+    assert manifest_info["source_count"] == 2
+    assert [report["name"] for report in reports] == ["one", "two"]
+    assert all(report["audit_reused"] for report in reports)
+
+
+def test_preflight_rejects_storage_manifest_from_different_mixture(tmp_path):
+    roots = (tmp_path / "one", tmp_path / "two")
+    for root in roots:
+        root.mkdir()
+    base = ExperimentConfig()
+    config = dataclasses.replace(
+        base,
+        data=dataclasses.replace(
+            base.data,
+            roots=tuple(str(root) for root in roots),
+            source_names=("one", "two"),
+            mixture_weights=(1.0, 1.0),
+            strict_manifest=True,
+        ),
+    )
+    manifest = _trusted_manifest(config, roots)
+    manifest["config"]["data"]["mixture_weights"] = [0.25, 0.75]
+    manifest_path = tmp_path / "storage-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    _, _, failures = audit_from_storage_manifest(manifest_path, config)
+    assert any("data.mixture_weights" in failure for failure in failures)
 
 
 def test_strict_manifest_reports_unknown_control_fields(tmp_path):

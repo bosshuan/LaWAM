@@ -5,6 +5,7 @@ import dataclasses
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 import torch
 
@@ -31,6 +32,24 @@ def parse_args():
         action="store_true",
         help="Load all local T5 encoder weights on CPU after checking its tokenizer/config",
     )
+    parser.add_argument(
+        "--storage-manifest",
+        help=(
+            "Trust a previously passed CPU storage manifest after verifying that "
+            "its dataset configuration matches this run; only check mapped roots "
+            "on this node instead of repeating the full sidecar audit"
+        ),
+    )
+    parser.add_argument(
+        "--compact-data-report",
+        action="store_true",
+        help="Summarize bulky dataset sidecars before serializing the node report",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Print only a one-line result when --output is provided",
+    )
     parser.add_argument("--output")
     parser.add_argument("--expected-gpus", type=int, default=8)
     parser.add_argument("--expected-device-substring", default="A100")
@@ -52,6 +71,162 @@ def json_default(value):
     if isinstance(value, Path):
         return str(value)
     raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
+_TRUSTED_DATA_FIELDS = (
+    "backend",
+    "roots",
+    "source_names",
+    "mixture_weights",
+    "control_adapter_overrides",
+    "strict_manifest",
+    "include_globs",
+    "exclude_contains",
+)
+_TRUSTED_ACTION_FIELDS = ("max_action_dim", "max_proprio_dim")
+_STRICT_ZERO_FIELDS = (
+    "unsupported_control_schema_count",
+    "unsupported_version_count",
+    "missing_video_feature_count",
+    "missing_task_metadata_count",
+    "oversized_control_schema_count",
+)
+
+
+def _canonical_json(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _manifest_config_failures(manifest: dict, config) -> list[str]:
+    failures: list[str] = []
+    audited_config = manifest.get("config", {})
+    audited_data = audited_config.get("data", {})
+    current_data = dataclasses.asdict(config.data)
+    for field in _TRUSTED_DATA_FIELDS:
+        if _canonical_json(audited_data.get(field)) != _canonical_json(
+            current_data.get(field)
+        ):
+            failures.append(
+                f"Storage manifest data.{field} does not match the active config"
+            )
+    audited_action = audited_config.get("action", {})
+    current_action = dataclasses.asdict(config.action)
+    for field in _TRUSTED_ACTION_FIELDS:
+        if audited_action.get(field) != current_action.get(field):
+            failures.append(
+                f"Storage manifest action.{field} does not match the active config"
+            )
+    return failures
+
+
+def audit_from_storage_manifest(
+    manifest_path: Path,
+    config,
+) -> tuple[list[dict], dict, list[str]]:
+    """Reuse a passed CPU manifest while checking the training-view paths.
+
+    The CPU audit is intentionally expensive and captures large dataset-specific
+    sidecars. H800 node preflight verifies that the exact audited configuration
+    is still active, checks every training root through the /opt/huawei view,
+    and carries forward only the strict summary required for the node report.
+    """
+    failures: list[str] = []
+    manifest_path = manifest_path.expanduser().resolve()
+    try:
+        with manifest_path.open("r", encoding="utf-8") as handle:
+            manifest = json.load(handle)
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return [], {"path": str(manifest_path)}, [
+            f"Failed to read trusted storage manifest: {type(error).__name__}: {error}"
+        ]
+
+    if manifest.get("audit_kind") != "cpu_storage_manifest":
+        failures.append("Trusted report is not a cpu_storage_manifest audit")
+    if manifest.get("passed") is not True or manifest.get("failures"):
+        failures.append("Trusted storage manifest did not pass strict validation")
+    failures.extend(_manifest_config_failures(manifest, config))
+
+    source_roots = config.data.roots or (config.data.root,)
+    source_names = config.data.source_names or tuple(
+        Path(root).expanduser().name for root in source_roots
+    )
+    manifest_sources = manifest.get("data_sources", [])
+    sources_by_name: dict[str, dict] = {}
+    for source in manifest_sources:
+        name = source.get("name")
+        if not isinstance(name, str) or name in sources_by_name:
+            failures.append(
+                "Trusted storage manifest has missing or duplicate source names"
+            )
+            continue
+        sources_by_name[name] = source
+    if set(sources_by_name) != set(source_names):
+        failures.append(
+            "Trusted storage manifest source names do not match the active config"
+        )
+
+    reports: list[dict] = []
+    for name, root_value in zip(source_names, source_roots):
+        root = Path(root_value).expanduser()
+        source = sources_by_name.get(name, {})
+        configured_root = source.get("configured_training_root")
+        if configured_root != root_value:
+            failures.append(
+                f"{name}: trusted training root {configured_root!r} does not match "
+                f"{root_value!r}"
+            )
+        root_exists = root.is_dir()
+        if not root_exists:
+            failures.append(f"{name}: training-view data root is missing: {root}")
+        subdatasets = int(source.get("lerobot_v21_subdatasets", 0))
+        supported = int(source.get("supported_control_schema_count", 0))
+        if subdatasets <= 0 or supported != subdatasets:
+            failures.append(
+                f"{name}: trusted manifest supports {supported}/{subdatasets} subdatasets"
+            )
+        for field in _STRICT_ZERO_FIELDS:
+            value = int(source.get(field, 0))
+            if value:
+                failures.append(f"{name}: trusted manifest has {value} {field}")
+        invalid_info = source.get("invalid_info_files", [])
+        if invalid_info:
+            failures.append(
+                f"{name}: trusted manifest contains invalid meta/info.json files"
+            )
+        normalization_sources = source.get("normalization_sources", {})
+        if int(normalization_sources.get("missing", 0)):
+            failures.append(
+                f"{name}: trusted manifest contains missing normalization"
+            )
+        reports.append(
+            {
+                "name": name,
+                "root": str(root),
+                "root_exists": root_exists,
+                "audit_reused": True,
+                "configured_training_root": configured_root,
+                "lerobot_v21_subdatasets": subdatasets,
+                "supported_control_schema_count": supported,
+                "unsupported_control_schema_count": int(
+                    source.get("unsupported_control_schema_count", 0)
+                ),
+                "normalization_sources": normalization_sources,
+                "fps_values": source.get("fps_values", {}),
+                "robot_types": source.get("robot_types", {}),
+                "control_schema_variants": source.get(
+                    "control_schema_variants", []
+                ),
+            }
+        )
+
+    manifest_info = {
+        "path": str(manifest_path),
+        "sha256": sha256(manifest_path),
+        "audit_kind": manifest.get("audit_kind"),
+        "passed": manifest.get("passed"),
+        "source_count": len(manifest_sources),
+    }
+    return reports, manifest_info, failures
 
 
 def discover_info_files(root: Path, patterns, excluded) -> list[Path]:
@@ -699,14 +874,24 @@ def main():
         },
     }
     data_reports = []
-    for name, root_value in zip(source_names, source_roots):
-        source_report, source_failures = audit_data_source(
-            name,
-            Path(root_value).expanduser(),
-            config,
+    if args.storage_manifest:
+        data_reports, storage_manifest, storage_failures = (
+            audit_from_storage_manifest(
+                Path(args.storage_manifest),
+                config,
+            )
         )
-        data_reports.append(source_report)
-        failures.extend(source_failures)
+        report["storage_manifest"] = storage_manifest
+        failures.extend(storage_failures)
+    else:
+        for name, root_value in zip(source_names, source_roots):
+            source_report, source_failures = audit_data_source(
+                name,
+                Path(root_value).expanduser(),
+                config,
+            )
+            data_reports.append(source_report)
+            failures.extend(source_failures)
     report["data_sources"] = data_reports
     if len(data_reports) == 1:
         source_report = data_reports[0]
@@ -738,11 +923,23 @@ def main():
     except OSError as error:
         failures.append(f"Output directory is not writable: {error}")
     report["failures"] = failures
+    report["passed"] = not failures
     output = Path(args.output).expanduser().resolve() if args.output else None
     if output is not None:
         report["report_path"] = str(output)
+    if args.compact_data_report:
+        from latent_wam.manifest_compact import compact_manifest
+
+        compact_manifest(report, ())
     serialized = json.dumps(report, indent=2, default=json_default)
-    print(serialized, flush=True)
+    if args.quiet and output is not None:
+        print(
+            f"H800 preflight passed={report['passed']} output={output} "
+            f"failures={len(failures)}",
+            flush=True,
+        )
+    else:
+        print(serialized, flush=True)
     if output is not None:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(serialized + "\n", encoding="utf-8")

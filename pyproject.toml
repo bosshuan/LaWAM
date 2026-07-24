@@ -28,6 +28,7 @@ dev = ["pytest>=8.0"]
 [project.scripts]
 latent-wam-train = "latent_wam.train:main"
 latent-wam-preflight = "latent_wam.preflight:main"
+latent-wam-data-probe = "latent_wam.data_probe:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
