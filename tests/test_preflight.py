@@ -148,6 +148,84 @@ def test_preflight_accepts_audited_robomind_stats_and_vector_schema(tmp_path):
     assert failures == []
 
 
+def test_preflight_accepts_explicit_future_only_oxe_adapter(tmp_path):
+    meta = tmp_path / "dataset" / "meta"
+    meta.mkdir(parents=True)
+    action_names = ["x", "y", "z", "roll", "pitch", "yaw", "gripper"]
+    state_names = ["x", "y", "z", "rx", "ry", "rz", "rw", "gripper"]
+    (meta / "info.json").write_text(
+        json.dumps(
+            {
+                "codebase_version": "v2.1",
+                "features": {
+                    "action": {
+                        "dtype": "float32",
+                        "shape": [7],
+                        "names": {"motors": action_names},
+                    },
+                    "observation.state": {
+                        "dtype": "float32",
+                        "shape": [8],
+                        "names": {"motors": state_names},
+                    },
+                    "observation.images.image": {
+                        "dtype": "video",
+                        "shape": [3, 480, 640],
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (meta / "tasks.jsonl").write_text(
+        '{"task_index": 0, "task": "test"}\n',
+        encoding="utf-8",
+    )
+    (meta / "stats_gr00t.json").write_text(
+        json.dumps(
+            {
+                "action": {"mean": [0.0] * 7, "std": [1.0] * 7},
+                "observation.state": {
+                    "mean": [0.0] * 8,
+                    "std": [1.0] * 8,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    base = ExperimentConfig()
+    config = dataclasses.replace(
+        base,
+        data=dataclasses.replace(
+            base.data,
+            roots=("/oxe",),
+            source_names=("oxe",),
+            mixture_weights=(1.0,),
+            control_adapter_overrides={"oxe": "oxe_mixed_control"},
+        ),
+        train=dataclasses.replace(base.train, stage="future"),
+    )
+    report, failures = audit_data_source("oxe", tmp_path, config)
+    assert report["normalization_sources"]["stats_gr00t.json"] == 1
+    assert report["supported_control_schema_count"] == 1
+    assert report["unsupported_control_schema_count"] == 0
+    assert report["control_schema_variants"] == [
+        {
+            "adapter": "oxe_cartesian_euler",
+            "robot_type": "dataset",
+            "action_keys": ["action"],
+            "state_keys": ["observation.state"],
+            "action_dim": 7,
+            "state_dim": 8,
+            "binary_gripper": False,
+            "rotation_representation": "euler_xyz_delta",
+            "stage_support": "future_only",
+            "subdatasets": 1,
+        }
+    ]
+    assert failures == []
+
+
 def test_jsonl_sidecar_audit_captures_only_first_nonempty_record(tmp_path):
     meta = tmp_path / "dataset" / "meta"
     meta.mkdir(parents=True)

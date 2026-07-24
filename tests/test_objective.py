@@ -66,3 +66,25 @@ def test_action_weight_scales_smoothness_too():
     first = JointObjective(base)(prediction, future, targets)
     second = JointObjective(doubled)(prediction, future, targets)
     assert torch.allclose(second.total, 2.0 * first.total)
+
+
+def test_future_stage_skips_action_diagnostics():
+    prediction = make_prediction()
+    future = tuple(torch.ones(2, 3, 4) for _ in range(4))
+    valid = torch.ones(2, 5, 6, dtype=torch.bool)
+    targets = TrainingTargets(
+        actions=torch.full((2, 5, 6), float("nan")),
+        action_valid=valid,
+        gripper_mask=torch.zeros_like(valid),
+        metadata=[{}, {}],
+    )
+    base = ExperimentConfig()
+    config = dataclasses.replace(
+        base,
+        train=dataclasses.replace(base.train, stage="future"),
+    )
+    output = JointObjective(config)(prediction, future, targets)
+    assert torch.isfinite(output.total)
+    assert output.action.item() == 0.0
+    assert output.gripper.item() == 0.0
+    assert output.smoothness.item() == 0.0

@@ -21,6 +21,9 @@ data:
     - robomind
     - robotwin_randomized
   control_adapter_overrides:
+    # OXE mixes Cartesian Euler-delta and joint action schemas. It is admitted
+    # only to this future-only Stage 1 pilot until SO(3) action loss is added.
+    oxe: oxe_mixed_control
     # The storage audit verified RoboMind's exact float32 action/actions/state
     # aliases, dimensions, and matching stats_gr00t normalization.
     robomind: robomind_joint_vector

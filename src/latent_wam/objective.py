@@ -61,6 +61,11 @@ class JointObjective(nn.Module):
                 future_losses.append((predicted.float() - target.float()).abs().mean())
             future_loss = torch.stack(future_losses).mean()
 
+        if self.config.train.stage == "future":
+            zero = prediction.action_logits.sum() * 0.0
+            total = self.config.loss.future_weight * future_loss
+            return LossOutput(total, future_loss, zero, zero, zero)
+
         valid = targets.action_valid
         gripper_mask = targets.gripper_mask & valid
         continuous_mask = valid & ~gripper_mask
@@ -99,9 +104,7 @@ class JointObjective(nn.Module):
             + self.config.loss.gripper_weight * gripper_loss
             + self.config.loss.smoothness_weight * smoothness_loss
         )
-        if self.config.train.stage == "future":
-            total = future_term
-        elif self.config.train.stage == "action_warmup":
+        if self.config.train.stage == "action_warmup":
             total = action_term
         else:
             total = future_term + action_term

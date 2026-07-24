@@ -192,6 +192,63 @@ def test_rejects_cartesian_and_opaque_vector_schemas():
     assert _select_control_feature_keys(opaque) == ((), (), None)
 
 
+def test_selects_only_explicitly_overridden_oxe_control_variants():
+    cartesian = {
+        "action": {
+            "dtype": "float32",
+            "shape": [7],
+            "names": {
+                "motors": ["x", "y", "z", "roll", "pitch", "yaw", "gripper"]
+            },
+        },
+        "observation.state": {
+            "dtype": "float32",
+            "shape": [8],
+            "names": {
+                "motors": [
+                    "x",
+                    "y",
+                    "z",
+                    "rx",
+                    "ry",
+                    "rz",
+                    "rw",
+                    "gripper",
+                ]
+            },
+        },
+    }
+    assert _select_control_feature_keys(cartesian) == ((), (), None)
+    assert _select_control_feature_keys(
+        cartesian,
+        "oxe_mixed_control",
+    ) == (
+        ("action",),
+        ("observation.state",),
+        "oxe_cartesian_euler",
+    )
+
+    joint_action_pose_state = {
+        "action": {
+            "dtype": "float32",
+            "shape": [8],
+            "names": {
+                "motors": [f"motor_{index}" for index in range(7)]
+                + ["gripper"]
+            },
+        },
+        "observation.state": cartesian["observation.state"],
+    }
+    assert _select_control_feature_keys(
+        joint_action_pose_state,
+        "oxe_mixed_control",
+    ) == (
+        ("action",),
+        ("observation.state",),
+        "oxe_joint_action_pose_state",
+    )
+
+
 def test_selects_only_explicitly_overridden_robomind_vector():
     features = {
         "action": {"dtype": "float32", "shape": [8], "names": ["action"]},

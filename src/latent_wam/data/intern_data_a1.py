@@ -123,6 +123,64 @@ def _is_named_joint_vector(feature: dict[str, Any]) -> bool:
     )
 
 
+_OXE_CARTESIAN_ACTION_NAMES = (
+    "x",
+    "y",
+    "z",
+    "roll",
+    "pitch",
+    "yaw",
+    "gripper",
+)
+_OXE_STATE_NAME_VARIANTS = {
+    tuple([f"motor_{index}" for index in range(7)] + ["gripper"]),
+    ("x", "y", "z", "rx", "ry", "rz", "rw", "gripper"),
+    ("x", "y", "z", "roll", "pitch", "yaw", "pad", "gripper"),
+    tuple([f"motor_{index}" for index in range(7)] + ["pad"]),
+    tuple([f"motor_{index}" for index in range(6)] + ["pad", "gripper"]),
+    tuple(f"motor_{index}" for index in range(8)),
+}
+
+
+def _select_oxe_mixed_control(
+    features: dict[str, Any],
+) -> tuple[tuple[str, ...], tuple[str, ...], str | None]:
+    action = features.get("action", {})
+    state = features.get("observation.state", {})
+    if (
+        not isinstance(action, dict)
+        or not isinstance(state, dict)
+        or action.get("dtype") != "float32"
+        or state.get("dtype") != "float32"
+        or _feature_size(state) != 8
+        or _feature_names(state) not in _OXE_STATE_NAME_VARIANTS
+    ):
+        return (), (), None
+
+    if (
+        _feature_size(action) == 7
+        and _feature_names(action) == _OXE_CARTESIAN_ACTION_NAMES
+    ):
+        return ("action",), ("observation.state",), "oxe_cartesian_euler"
+
+    if _feature_size(action) == 8 and _is_named_joint_vector(action):
+        adapter = (
+            "oxe_joint_vector"
+            if _is_named_joint_vector(state)
+            else "oxe_joint_action_pose_state"
+        )
+        return ("action",), ("observation.state",), adapter
+
+    return (), (), None
+
+
+def _allow_stats_gr00t(adapter_override: str | None) -> bool:
+    return adapter_override in {
+        "oxe_mixed_control",
+        "robomind_joint_vector",
+    }
+
+
 def _select_control_feature_keys(
     features: dict[str, Any],
     adapter_override: str | None = None,
@@ -163,6 +221,9 @@ def _select_control_feature_keys(
             namespaced_state_keys,
             "namespaced_joint_gripper",
         )
+
+    if adapter_override == "oxe_mixed_control":
+        return _select_oxe_mixed_control(features)
 
     if (
         "action" in features
@@ -370,6 +431,8 @@ def _resolve_robot_type(
     if adapter_name == "robomind_joint_vector":
         name = root.name.removeprefix("h5_")
         return re.sub(r"_\d+rgb$", "", name)
+    if adapter_name.startswith("oxe_"):
+        return root.name.removesuffix("_lerobot")
     return root.parent.name
 
 
@@ -483,9 +546,7 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
             norms, normalization_path = _load_norms(
                 root,
                 all_keys,
-                allow_stats_gr00t=(
-                    self.adapter_override == "robomind_joint_vector"
-                ),
+                allow_stats_gr00t=_allow_stats_gr00t(self.adapter_override),
             )
             action_norms = {key: norms[key] for key in action_keys if key in norms}
             state_norms = {key: norms[key] for key in state_keys if key in norms}

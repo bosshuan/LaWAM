@@ -10,6 +10,7 @@ import torch
 
 from latent_wam.config import load_config, resolve_output_root
 from latent_wam.data.intern_data_a1 import (
+    _allow_stats_gr00t,
     _feature_size,
     _load_norms,
     _resolve_robot_type,
@@ -349,7 +350,7 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
     if not info_files:
         failures.append(f"{name}: no candidate meta/info.json files were found")
     adapter_override = config.data.control_adapter_overrides.get(name)
-    allow_stats_gr00t = adapter_override == "robomind_joint_vector"
+    allow_stats_gr00t = _allow_stats_gr00t(adapter_override)
 
     normalization_sources = {
         "stats.json": 0,
@@ -523,6 +524,16 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
                     "binary_gripper": any(
                         "gripper" in key and "openness" in key
                         for key in action_keys
+                    ),
+                    "rotation_representation": (
+                        "euler_xyz_delta"
+                        if adapter_name == "oxe_cartesian_euler"
+                        else None
+                    ),
+                    "stage_support": (
+                        "future_only"
+                        if adapter_name.startswith("oxe_")
+                        else "all"
                     ),
                     "subdatasets": 0,
                 },

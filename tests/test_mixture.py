@@ -62,7 +62,8 @@ def test_h800_pilot_declares_five_equal_datasets_and_global_batch_64():
     assert config.data.roots[4].endswith("/RoboMind")
     assert config.data.roots[5].endswith("/RoboTwin-Randomized/Randomized")
     assert config.data.control_adapter_overrides == {
-        "robomind": "robomind_joint_vector"
+        "oxe": "oxe_mixed_control",
+        "robomind": "robomind_joint_vector",
     }
     assert all(not root.endswith("/InternData-A1/sim") for root in config.data.roots)
     assert any(
@@ -87,4 +88,21 @@ def test_config_rejects_mixture_length_mismatch():
         ),
     )
     with pytest.raises(ValueError, match="source_names"):
+        config.validate()
+
+
+def test_oxe_adapter_is_blocked_outside_future_stage():
+    base = ExperimentConfig()
+    config = dataclasses.replace(
+        base,
+        data=dataclasses.replace(
+            base.data,
+            roots=("/oxe", "/other"),
+            source_names=("oxe", "other"),
+            mixture_weights=(1.0, 1.0),
+            control_adapter_overrides={"oxe": "oxe_mixed_control"},
+        ),
+        train=dataclasses.replace(base.train, stage="joint"),
+    )
+    with pytest.raises(ValueError, match=r"SO\(3\) geodesic"):
         config.validate()

@@ -97,7 +97,7 @@ config keeps its `/opt/huawei` paths; the audit maps that prefix to
 decoding or model-weight loading):
 
 ```bash
-export LAWAM_RUN_ID=storage-manifest-005
+export LAWAM_RUN_ID=storage-manifest-006
 bash /home/ma-user/work/dataset/d_env_wulan/LaWAM/scripts/h800/audit_storage_manifest.sh
 ```
 
@@ -158,8 +158,14 @@ weight; the top-level `sim` root receives none. Historical `sim` content nested
 inside `sim_updated` remains valid. These weights are only for engineering
 validation. RoboMind uses the explicitly configured
 `robomind_joint_vector` adapter and falls back to its audited
-`meta/stats_gr00t.json` normalization. Other opaque action vectors remain
-unsupported unless they receive their own audited adapter.
+`meta/stats_gr00t.json` normalization. OXE uses an explicit mixed-control
+adapter: full `episodes_stats.jsonl` aggregation remains preferred for its 12
+covered subdatasets, while the other 19 use audited `stats_gr00t.json`.
+`stats_delta_state.json` is diagnostic metadata for derived Cartesian
+representations and is not used to normalize the raw Parquet fields. OXE is
+restricted to the future-only stage until SO(3) geodesic action loss is
+implemented. Other opaque action vectors remain unsupported unless they
+receive their own audited adapter.
 Sampling first selects a source and then a sample within that source, so large
 sources cannot silently dominate. The 32-GPU pilot keeps global batch 64 with
 gradient accumulation 2 and logs the observed fraction from every source.

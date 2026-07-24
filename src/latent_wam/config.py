@@ -203,7 +203,10 @@ class ExperimentConfig:
                     "control_adapter_overrides contains unknown source names: "
                     f"{sorted(unknown_adapter_sources)}"
                 )
-            supported_overrides = {"robomind_joint_vector"}
+            supported_overrides = {
+                "oxe_mixed_control",
+                "robomind_joint_vector",
+            }
             unknown_adapters = (
                 set(self.data.control_adapter_overrides.values())
                 - supported_overrides
@@ -212,6 +215,14 @@ class ExperimentConfig:
                 raise ValueError(
                     "Unsupported control adapter overrides: "
                     f"{sorted(unknown_adapters)}"
+                )
+            if (
+                "oxe_mixed_control" in self.data.control_adapter_overrides.values()
+                and self.train.stage != "future"
+            ):
+                raise ValueError(
+                    "oxe_mixed_control is currently restricted to the future "
+                    "stage until its SO(3) geodesic action loss is implemented"
                 )
             if self.data.fixed_sample_index is not None:
                 raise ValueError("fixed_sample_index is supported only with a single data root")
