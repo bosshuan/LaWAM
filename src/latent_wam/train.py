@@ -69,6 +69,7 @@ def apply_overrides(config: ExperimentConfig, args) -> ExperimentConfig:
             roots=(),
             source_names=(),
             mixture_weights=(),
+            control_adapter_overrides={},
             mixture_epoch_samples=None,
         )
     if args.fixed_sample_index is not None:

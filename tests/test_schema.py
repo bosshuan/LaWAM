@@ -1,7 +1,10 @@
+import json
+
 import numpy as np
 
 from latent_wam.data.intern_data_a1 import (
     _aggregate_episode_norms,
+    _load_norms,
     _select_control_feature_keys,
 )
 from latent_wam.data.schema import ActionSchema, ActionSchemaAdapter, FeatureNorm
@@ -187,3 +190,45 @@ def test_rejects_cartesian_and_opaque_vector_schemas():
     }
     assert _select_control_feature_keys(cartesian) == ((), (), None)
     assert _select_control_feature_keys(opaque) == ((), (), None)
+
+
+def test_selects_only_explicitly_overridden_robomind_vector():
+    features = {
+        "action": {"dtype": "float32", "shape": [8], "names": ["action"]},
+        "actions": {"dtype": "float32", "shape": [8], "names": ["actions"]},
+        "observation.state": {
+            "dtype": "float32",
+            "shape": [8],
+            "names": ["observation.state"],
+        },
+    }
+    assert _select_control_feature_keys(features) == ((), (), None)
+    assert _select_control_feature_keys(
+        features,
+        "robomind_joint_vector",
+    ) == (
+        ("action",),
+        ("observation.state",),
+        "robomind_joint_vector",
+    )
+
+
+def test_loads_stats_gr00t_as_last_normalization_fallback(tmp_path):
+    meta = tmp_path / "meta"
+    meta.mkdir()
+    stats = {
+        "action": {"mean": [1.0, 2.0], "std": [3.0, 4.0]},
+        "observation.state": {"mean": [5.0, 6.0], "std": [7.0, 8.0]},
+    }
+    (meta / "stats_gr00t.json").write_text(
+        json.dumps(stats),
+        encoding="utf-8",
+    )
+    norms, source = _load_norms(
+        tmp_path,
+        ("action", "observation.state"),
+        allow_stats_gr00t=True,
+    )
+    assert source == meta / "stats_gr00t.json"
+    assert np.allclose(norms["action"].mean, [1.0, 2.0])
+    assert np.allclose(norms["observation.state"].std, [7.0, 8.0])

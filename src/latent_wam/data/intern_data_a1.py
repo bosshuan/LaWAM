@@ -125,6 +125,7 @@ def _is_named_joint_vector(feature: dict[str, Any]) -> bool:
 
 def _select_control_feature_keys(
     features: dict[str, Any],
+    adapter_override: str | None = None,
 ) -> tuple[tuple[str, ...], tuple[str, ...], str | None]:
     """Select only schemas whose control semantics are explicit in metadata."""
     action_keys = _select_feature_keys(features, "actions.")
@@ -171,6 +172,30 @@ def _select_control_feature_keys(
     ):
         return ("action",), ("observation.state",), "named_joint_vector"
 
+    if adapter_override == "robomind_joint_vector":
+        action = features.get("action", {})
+        actions_alias = features.get("actions", {})
+        state = features.get("observation.state", {})
+        action_size = _feature_size(action) if isinstance(action, dict) else 0
+        alias_size = (
+            _feature_size(actions_alias) if isinstance(actions_alias, dict) else 0
+        )
+        state_size = _feature_size(state) if isinstance(state, dict) else 0
+        if (
+            isinstance(action, dict)
+            and isinstance(actions_alias, dict)
+            and isinstance(state, dict)
+            and action.get("dtype") == "float32"
+            and actions_alias.get("dtype") == "float32"
+            and state.get("dtype") == "float32"
+            and _feature_names(action) == ("action",)
+            and _feature_names(actions_alias) == ("actions",)
+            and _feature_names(state) == ("observation.state",)
+            and action_size in {7, 8, 14, 16}
+            and action_size == alias_size == state_size
+        ):
+            return ("action",), ("observation.state",), adapter_override
+
     return (), (), None
 
 
@@ -205,6 +230,14 @@ def _parse_norms(stats: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Feat
             continue
         mean = np.asarray(entry["mean"], dtype=np.float32).reshape(-1)
         std = np.asarray(entry["std"], dtype=np.float32).reshape(-1)
+        if (
+            mean.size == 0
+            or mean.shape != std.shape
+            or not np.isfinite(mean).all()
+            or not np.isfinite(std).all()
+            or np.any(std < 0)
+        ):
+            raise ValueError(f"Invalid mean/std normalization statistics for {key}")
         result[key] = FeatureNorm(mean=mean, std=std)
     return result
 
@@ -280,7 +313,10 @@ def _aggregate_episode_norms(
 
 
 def _load_norms(
-    root: Path, keys: tuple[str, ...]
+    root: Path,
+    keys: tuple[str, ...],
+    *,
+    allow_stats_gr00t: bool = False,
 ) -> tuple[dict[str, FeatureNorm], Path]:
     stats_path = root / "meta" / "stats.json"
     if stats_path.is_file():
@@ -291,9 +327,15 @@ def _load_norms(
         rows = _read_jsonl(episode_stats_path)
         return _aggregate_episode_norms(rows, keys), episode_stats_path
 
+    stats_gr00t_path = root / "meta" / "stats_gr00t.json"
+    if allow_stats_gr00t and stats_gr00t_path.is_file():
+        return _parse_norms(_read_json(stats_gr00t_path), keys), stats_gr00t_path
+
+    expected = f"{stats_path} or {episode_stats_path}"
+    if allow_stats_gr00t:
+        expected += f", or {stats_gr00t_path}"
     raise FileNotFoundError(
-        f"Missing normalization metadata for {root}; expected either "
-        f"{stats_path} or {episode_stats_path}"
+        f"Missing normalization metadata for {root}; expected {expected}"
     )
 
 
@@ -315,6 +357,20 @@ def _select_camera(features: dict[str, Any], requested: str) -> str:
     if not video_keys:
         raise ValueError("Subdataset has no video feature")
     return sorted(video_keys)[0]
+
+
+def _resolve_robot_type(
+    info: dict[str, Any],
+    root: Path,
+    adapter_name: str,
+) -> str:
+    explicit = info.get("robot_type")
+    if explicit:
+        return str(explicit)
+    if adapter_name == "robomind_joint_vector":
+        name = root.name.removeprefix("h5_")
+        return re.sub(r"_\d+rgb$", "", name)
+    return root.parent.name
 
 
 def _episode_number(path: Path) -> int:
@@ -352,13 +408,19 @@ def _table_rows(table, indices: list[int], keys: tuple[str, ...]) -> list[dict[s
 class InternDataA1Dataset(Dataset[TrainingBatch]):
     """Direct reader for the validated joint-space LeRobot v2.1 schema."""
 
-    def __init__(self, config: ExperimentConfig, split: str = "train"):
+    def __init__(
+        self,
+        config: ExperimentConfig,
+        split: str = "train",
+        adapter_override: str | None = None,
+    ):
         if config.data.backend != "lerobot_v21":
             raise ValueError("This MVP supports the official LeRobot v2.1 layout only")
         if split not in {"train", "val"}:
             raise ValueError("split must be train or val")
         self.config = config
         self.split = split
+        self.adapter_override = adapter_override
         self.root = Path(config.data.root).expanduser()
         if not self.root.is_dir():
             raise FileNotFoundError(f"LeRobot v2.1 root does not exist: {self.root}")
@@ -406,7 +468,8 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
             root = info_path.parent.parent
             features = info.get("features", {})
             action_keys, state_keys, adapter_name = _select_control_feature_keys(
-                features
+                features,
+                self.adapter_override,
             )
             if not action_keys or not state_keys or adapter_name is None:
                 if self.config.data.strict_manifest:
@@ -417,7 +480,13 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
                 continue
             camera = _select_camera(features, self.config.video.camera_key)
             all_keys = (*action_keys, *state_keys)
-            norms, normalization_path = _load_norms(root, all_keys)
+            norms, normalization_path = _load_norms(
+                root,
+                all_keys,
+                allow_stats_gr00t=(
+                    self.adapter_override == "robomind_joint_vector"
+                ),
+            )
             action_norms = {key: norms[key] for key in action_keys if key in norms}
             state_norms = {key: norms[key] for key in state_keys if key in norms}
             missing_norms = [
@@ -439,7 +508,7 @@ class InternDataA1Dataset(Dataset[TrainingBatch]):
                         f"have shape ({norm.mean.size}, {norm.std.size}); "
                         f"expected {expected_size}"
                     )
-            robot_type = str(info.get("robot_type", root.parent.name))
+            robot_type = _resolve_robot_type(info, root, adapter_name)
             schema_name = f"{robot_type}:{'|'.join(action_keys)}"
             if adapter_name != "joint_gripper":
                 action_signature = "|".join(

@@ -88,14 +88,16 @@ Before allocating H800s, audit all five candidate datasets from a CPU node that
 can see the persistent storage paths. They occupy six explicit roots because
 InternData-A1 uses `real` and `sim_updated` as separate sub-sources and excludes
 top-level `sim`. RoboMind is included in manifest validation while its
-`stats_gr00t.json` metadata is audited; it cannot enter training until strict
-normalization and schema checks pass. RoboTwin reads only its `Randomized`
-subdirectory. The training config keeps its `/opt/huawei` paths; the audit maps
-that prefix to `/home/ma-user/work` without editing the YAML and reads metadata
-only (no video decoding or model-weight loading):
+`stats_gr00t.json` metadata is audited. `storage-manifest-004` verified all 13
+RoboMind subdatasets, and the next manifest run validates the resulting strict
+adapter end to end. Do not start training until the complete multi-source
+report passes. RoboTwin reads only its `Randomized` subdirectory. The training
+config keeps its `/opt/huawei` paths; the audit maps that prefix to
+`/home/ma-user/work` without editing the YAML and reads metadata only (no video
+decoding or model-weight loading):
 
 ```bash
-export LAWAM_RUN_ID=storage-manifest-001
+export LAWAM_RUN_ID=storage-manifest-005
 bash /home/ma-user/work/dataset/d_env_wulan/LaWAM/scripts/h800/audit_storage_manifest.sh
 ```
 
@@ -106,6 +108,10 @@ loader adapter or metadata correction; sync that report back for review and do
 not start the 32-GPU pilot yet. This storage-view script deliberately bypasses
 `conda activate` and invokes `vjepa2-312/bin/python3.12` directly, because the
 copied Conda launcher retains an absolute `/opt/huawei` interpreter shebang.
+For OXE adapter design, the report captures complete `stats_gr00t.json` and
+`stats_delta_state.json` sidecars plus the first non-empty record from every
+`episodes_stats.jsonl`; first-record capture is diagnostic only, while approved
+episode normalization still parses and aggregates every record by frame count.
 
 The ModelArts launcher is `scripts/h800/launch_4node.sh`. It consumes the
 platform-provided `VC_WORKER_HOSTS`, `VC_TASK_INDEX`, `MA_NUM_HOSTS`, and
@@ -137,8 +143,10 @@ RoboTwin Randomized as five equally weighted datasets across six explicit roots.
 InternData-A1 `real` and `sim_updated` each receive half of InternData's pilot
 weight; the top-level `sim` root receives none. Historical `sim` content nested
 inside `sim_updated` remains valid. These weights are only for engineering
-validation. RoboMind's configured weight does not authorize training while its
-strict manifest remains unresolved.
+validation. RoboMind uses the explicitly configured
+`robomind_joint_vector` adapter and falls back to its audited
+`meta/stats_gr00t.json` normalization. Other opaque action vectors remain
+unsupported unless they receive their own audited adapter.
 Sampling first selects a source and then a sample within that source, so large
 sources cannot silently dominate. The 32-GPU pilot keeps global batch 64 with
 gradient accumulation 2 and logs the observed fraction from every source.
@@ -152,7 +160,8 @@ layout (`meta/info.json`, per-episode Parquet, and per-camera MP4). It discovers
 subdatasets recursively, chooses the head/main camera, and constructs masked
 joint/gripper schemas from each `info.json`. Normalization uses `meta/stats.json`
 when present; the original `sim` release is supported by frame-weighted
-aggregation of its LeRobot v2.1 `meta/episodes_stats.jsonl`. LeRobot v3.0
+aggregation of its LeRobot v2.1 `meta/episodes_stats.jsonl`. Audited datasets
+such as RoboMind may use `meta/stats_gr00t.json` as a final fallback. LeRobot v3.0
 directories are excluded explicitly rather than being misread as v2.1. That
 `sim` support is retained only for reproducing completed A100 bring-up checks;
 the H800 pilot and formal mixture select only the top-level `real` and

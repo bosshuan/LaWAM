@@ -30,17 +30,24 @@ class LeRobotMixtureDataset(Dataset[TrainingBatch]):
         self.source_offsets: list[int] = []
         self.source_sizes: list[int] = []
         total = 0
-        for root in roots:
+        for root, source_name in zip(roots, self.source_names):
             source_data = dataclasses.replace(
                 config.data,
                 root=root,
                 roots=(),
                 source_names=(),
                 mixture_weights=(),
+                control_adapter_overrides={},
                 mixture_epoch_samples=None,
             )
             source_config = dataclasses.replace(config, data=source_data)
-            dataset = InternDataA1Dataset(source_config, split=split)
+            dataset = InternDataA1Dataset(
+                source_config,
+                split=split,
+                adapter_override=config.data.control_adapter_overrides.get(
+                    source_name
+                ),
+            )
             self.sources.append(dataset)
             self.source_offsets.append(total)
             self.source_sizes.append(len(dataset))

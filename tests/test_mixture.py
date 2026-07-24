@@ -61,6 +61,9 @@ def test_h800_pilot_declares_five_equal_datasets_and_global_batch_64():
     assert config.data.roots[3].endswith("/InternData-A1/sim_updated")
     assert config.data.roots[4].endswith("/RoboMind")
     assert config.data.roots[5].endswith("/RoboTwin-Randomized/Randomized")
+    assert config.data.control_adapter_overrides == {
+        "robomind": "robomind_joint_vector"
+    }
     assert all(not root.endswith("/InternData-A1/sim") for root in config.data.roots)
     assert any(
         "handover_objects_right_left_part8" in token

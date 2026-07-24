@@ -20,9 +20,13 @@ data:
     - interndata_a1_sim_updated
     - robomind
     - robotwin_randomized
+  control_adapter_overrides:
+    # The storage audit verified RoboMind's exact float32 action/actions/state
+    # aliases, dimensions, and matching stats_gr00t normalization.
+    robomind: robomind_joint_vector
   # The five active datasets are equally weighted for the engineering pilot.
   # The two InternData roots split its one-dataset share equally; top-level sim
-  # is not used. RoboMind remains strict until stats_gr00t metadata is audited.
+  # is not used. RoboMind uses its explicitly audited vector adapter.
   # Replace these explicit weights after manifest review.
   mixture_weights: [1.0, 1.0, 0.5, 0.5, 1.0, 1.0]
   mixture_epoch_samples: 3200

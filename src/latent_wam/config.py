@@ -61,6 +61,7 @@ class DataConfig:
     roots: tuple[str, ...] = ()
     source_names: tuple[str, ...] = ()
     mixture_weights: tuple[float, ...] = ()
+    control_adapter_overrides: dict[str, str] = field(default_factory=dict)
     mixture_epoch_samples: int | None = None
     strict_manifest: bool = False
     backend: str = "lerobot_v21"
@@ -194,10 +195,35 @@ class ExperimentConfig:
                 for weight in self.data.mixture_weights
             ):
                 raise ValueError("mixture_weights must be finite and positive")
+            unknown_adapter_sources = (
+                set(self.data.control_adapter_overrides) - set(self.data.source_names)
+            )
+            if unknown_adapter_sources:
+                raise ValueError(
+                    "control_adapter_overrides contains unknown source names: "
+                    f"{sorted(unknown_adapter_sources)}"
+                )
+            supported_overrides = {"robomind_joint_vector"}
+            unknown_adapters = (
+                set(self.data.control_adapter_overrides.values())
+                - supported_overrides
+            )
+            if unknown_adapters:
+                raise ValueError(
+                    "Unsupported control adapter overrides: "
+                    f"{sorted(unknown_adapters)}"
+                )
             if self.data.fixed_sample_index is not None:
                 raise ValueError("fixed_sample_index is supported only with a single data root")
-        elif self.data.source_names or self.data.mixture_weights:
-            raise ValueError("source_names and mixture_weights require data.roots")
+        elif (
+            self.data.source_names
+            or self.data.mixture_weights
+            or self.data.control_adapter_overrides
+        ):
+            raise ValueError(
+                "source_names, mixture_weights, and control_adapter_overrides "
+                "require data.roots"
+            )
         elif self.data.mixture_epoch_samples is not None:
             raise ValueError("mixture_epoch_samples requires data.roots")
         if (

@@ -12,6 +12,7 @@ from latent_wam.config import load_config, resolve_output_root
 from latent_wam.data.intern_data_a1 import (
     _feature_size,
     _load_norms,
+    _resolve_robot_type,
     _select_control_feature_keys,
 )
 
@@ -91,7 +92,11 @@ def compact_control_feature_specs(features: dict) -> dict[str, dict]:
     return result
 
 
-def inspect_normalization_keys(meta: Path) -> tuple[str, list[str]]:
+def inspect_normalization_keys(
+    meta: Path,
+    *,
+    allow_stats_gr00t: bool = False,
+) -> tuple[str, list[str]]:
     """Read only the normalization key names, including one JSONL row at most."""
     stats_path = meta / "stats.json"
     if stats_path.is_file():
@@ -113,6 +118,12 @@ def inspect_normalization_keys(meta: Path) -> tuple[str, list[str]]:
                     sorted(stats) if isinstance(stats, dict) else [],
                 )
         return "episodes_stats.jsonl", []
+
+    stats_gr00t_path = meta / "stats_gr00t.json"
+    if allow_stats_gr00t and stats_gr00t_path.is_file():
+        with stats_gr00t_path.open("r", encoding="utf-8") as handle:
+            stats = json.load(handle)
+        return "stats_gr00t.json", sorted(stats) if isinstance(stats, dict) else []
     return "missing", []
 
 
@@ -157,6 +168,68 @@ def audit_json_sidecars(
         "file_count": len(paths),
         "variants": list(variants.values()),
         "invalid_files": invalid_files,
+    }
+
+
+def audit_jsonl_first_records(
+    root: Path,
+    filename: str,
+    excluded: tuple[str, ...],
+) -> dict:
+    """Capture one representative record per JSONL sidecar.
+
+    This keeps the CPU manifest bounded while exposing the exact statistic
+    fields and shapes needed to compare episode statistics with dataset-level
+    sidecars. Full validation still happens when an approved source is loaded.
+    """
+    paths = [
+        path
+        for path in sorted(root.glob(f"**/{filename}"))
+        if not any(token in str(path) for token in excluded)
+    ]
+    variants: dict[str, dict] = {}
+    invalid_files: list[dict[str, str]] = []
+    for path in paths:
+        try:
+            first_record = None
+            first_record_line = None
+            with path.open("r", encoding="utf-8") as handle:
+                for line_number, line in enumerate(handle, start=1):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    first_record = json.loads(line)
+                    first_record_line = line_number
+                    break
+            if first_record is None:
+                raise ValueError("no non-empty JSONL records")
+            signature = json.dumps(first_record, sort_keys=True)
+            variant = variants.setdefault(
+                signature,
+                {
+                    "first_record": first_record,
+                    "files": 0,
+                    "sample_paths": [],
+                    "sample_line_numbers": [],
+                },
+            )
+            variant["files"] += 1
+            if len(variant["sample_paths"]) < 5:
+                variant["sample_paths"].append(str(path.relative_to(root)))
+                variant["sample_line_numbers"].append(first_record_line)
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as error:
+            invalid_files.append(
+                {
+                    "path": str(path.relative_to(root)),
+                    "error": f"{type(error).__name__}: {error}",
+                }
+            )
+    return {
+        "filename": filename,
+        "file_count": len(paths),
+        "variants": list(variants.values()),
+        "invalid_files": invalid_files,
+        "scope": "first non-empty record per file",
     }
 
 
@@ -263,12 +336,25 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
         "stats_gr00t.json",
         config.data.exclude_contains,
     )
+    report["stats_delta_state_metadata"] = audit_json_sidecars(
+        root,
+        "stats_delta_state.json",
+        config.data.exclude_contains,
+    )
+    report["episodes_stats_metadata"] = audit_jsonl_first_records(
+        root,
+        "episodes_stats.jsonl",
+        config.data.exclude_contains,
+    )
     if not info_files:
         failures.append(f"{name}: no candidate meta/info.json files were found")
+    adapter_override = config.data.control_adapter_overrides.get(name)
+    allow_stats_gr00t = adapter_override == "robomind_joint_vector"
 
     normalization_sources = {
         "stats.json": 0,
         "episodes_stats.jsonl": 0,
+        "stats_gr00t.json": 0,
         "missing": 0,
     }
     missing_normalization = []
@@ -292,6 +378,8 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
             normalization_sources["stats.json"] += 1
         elif (meta / "episodes_stats.jsonl").is_file():
             normalization_sources["episodes_stats.jsonl"] += 1
+        elif allow_stats_gr00t and (meta / "stats_gr00t.json").is_file():
+            normalization_sources["stats_gr00t.json"] += 1
         else:
             normalization_sources["missing"] += 1
             missing_normalization.append(str(meta))
@@ -321,7 +409,10 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
             if len(control_variant["sample_info_files"]) < 3:
                 control_variant["sample_info_files"].append(relative_info_path)
 
-            normalization_source, normalization_keys = inspect_normalization_keys(meta)
+            normalization_source, normalization_keys = inspect_normalization_keys(
+                meta,
+                allow_stats_gr00t=allow_stats_gr00t,
+            )
             normalization_signature = json.dumps(
                 [normalization_source, normalization_keys], sort_keys=True
             )
@@ -342,7 +433,8 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
             license_name = str(info.get("license", "unspecified"))
             licenses[license_name] = licenses.get(license_name, 0) + 1
             action_keys, state_keys, adapter_name = _select_control_feature_keys(
-                features
+                features,
+                adapter_override,
             )
             videos = sorted(
                 key
@@ -381,6 +473,7 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
             norms, normalization_path = _load_norms(
                 info_path.parent.parent,
                 all_control_keys,
+                allow_stats_gr00t=allow_stats_gr00t,
             )
             missing_norm_keys = [
                 key
@@ -399,7 +492,11 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
                         f"{normalization_path} statistics for {key} have shape "
                         f"({norm.mean.size}, {norm.std.size}), expected {expected_size}"
                     )
-            robot_type = str(info.get("robot_type", info_path.parent.parent.name))
+            robot_type = _resolve_robot_type(
+                info,
+                info_path.parent.parent,
+                adapter_name,
+            )
             robot_types[robot_type] = robot_types.get(robot_type, 0) + 1
             variant_name = json.dumps(
                 {
@@ -463,9 +560,12 @@ def audit_data_source(name: str, root: Path, config) -> tuple[dict, list[str]]:
         }
     )
     if missing_normalization:
+        allowed_normalization = ["stats.json", "episodes_stats.jsonl"]
+        if allow_stats_gr00t:
+            allowed_normalization.append("stats_gr00t.json")
         failures.append(
-            f"{name}: {len(missing_normalization)} subdatasets have neither "
-            "stats.json nor episodes_stats.jsonl"
+            f"{name}: {len(missing_normalization)} subdatasets have no allowed "
+            f"normalization source (expected {' or '.join(allowed_normalization)})"
         )
     if info_files and not schema_variants:
         failures.append(f"{name}: no supported joint/gripper control schema")
@@ -512,6 +612,7 @@ def main():
             roots=(),
             source_names=(),
             mixture_weights=(),
+            control_adapter_overrides={},
             mixture_epoch_samples=None,
         )
     config = dataclasses.replace(config, model=model, data=data)
