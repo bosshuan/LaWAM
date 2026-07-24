@@ -130,7 +130,11 @@ def main():
     serialized = json.dumps(report, indent=2, default=json_default)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(serialized + "\n", encoding="utf-8")
-    print(serialized, flush=True)
+    print(f"Detailed storage manifest: {output}", flush=True)
+    print(f"Passed: {report['passed']}", flush=True)
+    print(f"Failure count: {len(failures)}", flush=True)
+    for failure in failures:
+        print(f"- {failure}", flush=True)
     if failures:
         raise SystemExit(1)
 

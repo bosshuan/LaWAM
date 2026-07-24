@@ -17,3 +17,4 @@ src/latent_wam.egg-info
 # Server-local path overrides and generated manifests
 configs/local/
 *.manifest.json
+*.full.json

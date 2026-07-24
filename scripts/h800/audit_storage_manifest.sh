@@ -10,6 +10,7 @@ PYTHON="${LAWAM_STORAGE_PYTHON:-${CONDA_ENV}/bin/python3.12}"
 CONFIG_FILE="${LAWAM_CONFIG:-${REPO_ROOT}/configs/h800/mixture_stage1_pilot.yaml}"
 RUN_ID="${LAWAM_RUN_ID:-latest}"
 REPORT="${LAWAM_MANIFEST_REPORT:-${REPO_ROOT}/outputs/preflight/storage_manifest/${RUN_ID}.json}"
+DETAIL_REPORT="${LAWAM_MANIFEST_DETAIL_REPORT:-${REPO_ROOT}/outputs/preflight/storage_manifest/${RUN_ID}.full.json}"
 
 if [[ ! -f "${REPO_ROOT}/pyproject.toml" ]]; then
   echo "Missing storage-view LaWAM repository: ${REPO_ROOT}" >&2
@@ -36,9 +37,21 @@ export PYTHONPATH="${REPO_ROOT}/src${PYTHONPATH:+:${PYTHONPATH}}"
 export CUDA_VISIBLE_DEVICES=""
 
 cd "${REPO_ROOT}"
-echo "CPU storage manifest report: ${REPORT}"
+echo "CPU storage manifest detailed report: ${DETAIL_REPORT}"
+echo "CPU storage manifest compact report: ${REPORT}"
+set +e
 "${PYTHON}" -m latent_wam.manifest_audit \
   --config "${CONFIG_FILE}" \
   --path-map-from /opt/huawei \
   --path-map-to /home/ma-user/work \
-  --output "${REPORT}"
+  --output "${DETAIL_REPORT}"
+AUDIT_STATUS=$?
+set -e
+
+"${PYTHON}" -m latent_wam.manifest_compact \
+  --input "${DETAIL_REPORT}" \
+  --output "${REPORT}" \
+  --detail-source oxe \
+  --detail-source robomind
+
+exit "${AUDIT_STATUS}"

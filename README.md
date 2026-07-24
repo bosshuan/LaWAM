@@ -101,13 +101,26 @@ export LAWAM_RUN_ID=storage-manifest-005
 bash /home/ma-user/work/dataset/d_env_wulan/LaWAM/scripts/h800/audit_storage_manifest.sh
 ```
 
-The JSON is written to
-`outputs/preflight/storage_manifest/<run-id>.json` even if strict validation
-returns exit code 1. A nonzero exit means one or more dataset schemas require a
-loader adapter or metadata correction; sync that report back for review and do
-not start the 32-GPU pilot yet. This storage-view script deliberately bypasses
+The audit always writes two reports even if strict validation returns exit code
+1: a server-local detailed report at
+`outputs/preflight/storage_manifest/<run-id>.full.json` and a GitHub-sized
+report at `outputs/preflight/storage_manifest/<run-id>.json`. The compact report
+retains complete OXE and RoboMind sidecars while summarizing sidecars from the
+other sources. Sync only the compact report. A nonzero exit means one or more
+dataset schemas require a loader adapter or metadata correction; do not start
+the 32-GPU pilot yet. This storage-view script deliberately bypasses
 `conda activate` and invokes `vjepa2-312/bin/python3.12` directly, because the
 copied Conda launcher retains an absolute `/opt/huawei` interpreter shebang.
+
+To compact a legacy oversized report without rerunning the dataset audit:
+
+```bash
+export LAWAM_RUN_ID=storage-manifest-005
+bash /home/ma-user/work/dataset/d_env_wulan/LaWAM/scripts/h800/compact_storage_manifest.sh
+```
+
+This reads `<run-id>.json` and writes `<run-id>-compact.json`, leaving the
+original report unchanged.
 For OXE adapter design, the report captures complete `stats_gr00t.json` and
 `stats_delta_state.json` sidecars plus the first non-empty record from every
 `episodes_stats.jsonl`; first-record capture is diagnostic only, while approved
